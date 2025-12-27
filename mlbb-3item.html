@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MLBB Meta Recommender</title>
+    <title>MLBB Meta Lab</title>
     <style>
         :root {
             --bg-dark: #0f172a;
@@ -180,6 +180,7 @@
         .error-screen { display: none; text-align: center; padding: 4rem 1rem; color: var(--text-muted); }
         .error-screen.active { display: block; }
         .btn-demo { margin-top: 1.5rem; background: var(--accent); color: white; border: none; padding: 0.8rem 1.5rem; border-radius: var(--radius); font-weight: 600; cursor: pointer; }
+        .btn-test-link { margin-top:1rem; background:transparent; border:1px solid var(--accent); color:var(--accent); padding:0.5rem; border-radius:var(--radius); cursor:pointer;}
 
     </style>
 </head>
@@ -195,7 +196,9 @@
 
 <div id="error-view" class="error-screen">
     <h2>Data Unavailable</h2>
-    <p>Please sync with GitHub to load the latest Season 35+ Meta.</p>
+    <p>Please sync with GitHub to load the latest 130+ Hero Roster.</p>
+    <button class="btn-test-link" onclick="app.testLink()">Test Link</button>
+    <br>
     <button class="btn-demo" onclick="app.loadDemoData()">Load Demo Data</button>
 </div>
 
@@ -243,8 +246,8 @@
 const CONFIG = {
     // Configured for user: spitwats, repo: mlbb-app
     DATA_URL: "https://spitwats.github.io/mlbb-app/mlbb-data.json", 
-    CACHE_KEY: "mlbb_data_cache_v2",
-    META_KEY: "mlbb_data_meta_cache_v2",
+    CACHE_KEY: "mlbb_data_cache_v3",
+    META_KEY: "mlbb_data_meta_cache_v3",
     
     // ADVANCED WEIGHTS
     W_HARD_COUNTER: 4.0,  // Direct counter (e.g., Anti-Heal vs Estes)
@@ -276,6 +279,8 @@ const app = {
         }
     },
 
+    testLink: () => { window.open(CONFIG.DATA_URL, '_blank'); },
+
     fetchData: async (silent = false) => {
         const btn = document.getElementById('sync-btn');
         if(btn) btn.innerText = "Syncing...";
@@ -301,7 +306,7 @@ const app = {
     },
 
     loadDemoData: () => {
-        // Fallback demo data if fetch fails
+        // Fallback demo data with new tags
         const demo = {
             meta: { patch: "Demo Mode", generated_at: "Now" },
             heroes: [
@@ -318,7 +323,6 @@ const app = {
         app.showMain();
     },
 
-    // UI Logic
     renderMeta: (meta, h, i) => {
         document.getElementById('data-version').innerText = `Patch ${meta.patch} (${h}H/${i}I)`;
     },
@@ -332,7 +336,6 @@ const app = {
         document.getElementById('error-view').classList.add('active');
     },
     
-    // Picker & Selection Logic (Same as before but simplified)
     updateUI: () => {
         const { hero, enemies } = state.selection;
         const hMap = new Map(state.data.heroes.map(h => [h.id, h]));
@@ -355,7 +358,7 @@ const app = {
         state.pickerMode = mode;
         document.getElementById('picker-modal').classList.add('active');
         document.getElementById('search-box').value = '';
-        document.getElementById('search-box').focus();
+        setTimeout(()=> document.getElementById('search-box').focus(), 50);
         app.filterList();
     },
     closePicker: () => document.getElementById('picker-modal').classList.remove('active'),
@@ -388,12 +391,10 @@ const app = {
         app.updateUI();
     },
 
-    // --- The Brain: Deep Research Logic ---
     calculate: () => {
         const myHero = state.data.heroes.find(h => h.id === state.selection.hero);
         const enemies = state.selection.enemies.map(id => state.data.heroes.find(h => h.id === id));
         
-        // Context Awareness
         const isMagic = myHero.damage_type === "magic";
         const isPhys = myHero.damage_type === "physical";
         const isTank = myHero.roles.includes("Tank") || myHero.roles.includes("Support");
@@ -405,28 +406,28 @@ const app = {
             // 0. Hard Filters
             if (isMagic && item.category === "attack") return { score: -99 };
             if (isPhys && item.category === "magic") return { score: -99 };
-            // Anti-Healing Logic: Don't suggest Sea Halberd (Phys) to Mages
             if (isMagic && item.id === "i_sea_halberd") return { score: -99 };
             if (isPhys && item.id === "i_necklace_durance") return { score: -99 };
 
-            // 1. Core Synergy (Does this item fit my hero?)
+            // 1. Core Synergy
             if (item.synergy_tags && myHero.style_tags) {
                 const matches = item.synergy_tags.filter(t => myHero.style_tags.includes(t));
                 if (matches.length > 0) {
                     score += (CONFIG.W_CORE_SYNERGY * matches.length);
-                    reasons.push(`Core: Matches your need for ${matches[0].replace(/need_/g, '').replace(/_/g, ' ')}`);
+                    reasons.push(`Core: Matches need for ${matches[0].replace(/need_/g, '').replace(/_/g, ' ')}`);
                 }
             }
 
-            // 2. Counter Logic (Does this item beat the enemies?)
+            // 2. Counter Logic
             if (item.counter_tags) {
                 enemies.forEach(e => {
                     const matches = item.counter_tags.filter(t => e.threat_tags.includes(t));
                     if (matches.length > 0) {
-                        // Weight based on threat level
                         let weight = CONFIG.W_SOFT_COUNTER;
+                        // Boost for critical counters
                         if (matches.includes("high_healing") && item.counter_tags.includes("high_healing")) weight = CONFIG.W_HARD_COUNTER;
                         if (matches.includes("burst_magic") && item.name.includes("Athena")) weight = CONFIG.W_HARD_COUNTER;
+                        if (matches.includes("hard_cc") && item.name.includes("Tough")) weight = CONFIG.W_HARD_COUNTER;
                         
                         score += weight;
                         const threatName = matches[0].replace(/_/g, ' ');
@@ -435,33 +436,26 @@ const app = {
                 });
             }
 
-            // 3. Role Adjustments
+            // 3. Role Adjustments (Defense items on squishies)
             if (item.category === "defense" && !isTank && item.category !== "movement") {
-                // Penalize full defense items on carries unless they are critical counters
                 if (score < 4) score -= 2; 
             }
 
             return { item, score, reasons: [...new Set(reasons)] };
         };
 
-        // Split Pools
         const bootsPool = state.data.items.filter(i => i.category === 'movement');
         const itemPool = state.data.items.filter(i => i.category !== 'movement');
 
-        // Rank
         const rankedBoots = bootsPool.map(scoreItem).sort((a,b) => b.score - a.score);
         const rankedItems = itemPool.map(scoreItem).filter(x => x.score > 0).sort((a,b) => b.score - a.score);
 
         const results = [];
-        
-        // Add Best Boot
         if (rankedBoots[0]) {
             rankedBoots[0].isBoot = true;
             if(rankedBoots[0].reasons.length === 0) rankedBoots[0].reasons.push("Best movement option.");
             results.push(rankedBoots[0]);
         }
-
-        // Add Top 3 Items
         results.push(...rankedItems.slice(0, 3));
 
         app.renderResults(results);
@@ -504,862 +498,4 @@ document.addEventListener('DOMContentLoaded', app.init);
 </body>
 </html>
 
-
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 50;
-        }
-
-        h1 { font-size: 1.1rem; font-weight: 700; color: var(--gold); }
-        .meta-info { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;}
-
-        .btn-refresh {
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text-main);
-            padding: 0.4rem 0.8rem;
-            border-radius: var(--radius);
-            font-size: 0.8rem;
-            cursor: pointer;
-            min-width: 80px;
-            text-align: center;
-        }
-
-        /* Container */
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 1rem;
-        }
-
-        /* Selection Panels */
-        .panel {
-            background: var(--bg-card);
-            border-radius: var(--radius);
-            padding: 1rem;
-            margin-bottom: 1rem;
-            border: 1px solid var(--border);
-        }
-
-        .panel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.8rem;
-        }
-
-        .panel-title { font-weight: 600; font-size: 0.95rem; }
-        .panel-count { font-size: 0.8rem; color: var(--text-muted); }
-
-        .chip-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            min-height: 40px;
-        }
-
-        .chip {
-            background: var(--bg-dark);
-            border: 1px solid var(--border);
-            padding: 0.3rem 0.6rem;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-        }
-
-        .chip-remove {
-            color: var(--danger);
-            cursor: pointer;
-            font-weight: bold;
-            padding: 0 4px;
-        }
-
-        .add-btn {
-            background: rgba(59, 130, 246, 0.1);
-            color: var(--accent);
-            border: 1px dashed var(--accent);
-            padding: 0.3rem 0.8rem;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 0.3rem;
-        }
-
-        /* Action Area */
-        .action-area {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: var(--bg-card);
-            padding: 1rem;
-            border-top: 1px solid var(--border);
-            display: flex;
-            justify-content: center;
-            z-index: 40;
-            box-shadow: 0 -4px 10px rgba(0,0,0,0.3);
-        }
-
-        .btn-main {
-            background: var(--gold);
-            color: #000;
-            border: none;
-            padding: 0.8rem 2rem;
-            border-radius: 30px;
-            font-weight: 700;
-            width: 100%;
-            max-width: 400px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
-
-        .btn-main:disabled {
-            background: var(--border);
-            color: var(--text-muted);
-            cursor: not-allowed;
-        }
-
-        /* Modal */
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--bg-dark);
-            z-index: 100;
-            display: none;
-            flex-direction: column;
-        }
-
-        .modal.active { display: flex; }
-
-        .modal-header {
-            padding: 1rem;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .search-input {
-            flex: 1;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            padding: 0.6rem;
-            border-radius: var(--radius);
-            color: var(--text-main);
-            font-size: 1rem;
-        }
-
-        .btn-close {
-            background: transparent;
-            border: none;
-            color: var(--text-main);
-            font-size: 1.5rem;
-            cursor: pointer;
-            padding: 0 0.5rem;
-            line-height: 1;
-        }
-
-        .modal-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 1rem;
-        }
-
-        .list-item {
-            padding: 0.8rem;
-            border-bottom: 1px solid var(--border);
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .list-item:hover { background: var(--bg-card); }
-        .list-item-role { font-size: 0.8rem; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px;}
-
-        /* Results */
-        .results-container {
-            margin-top: 2rem;
-            display: none;
-            padding-bottom: 20px;
-            animation: fadeIn 0.3s ease-in;
-        }
-        
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .results-container.active { display: block; }
-
-        .result-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 1rem;
-            margin-bottom: 1rem;
-            position: relative;
-            overflow: hidden;
-            box-shadow: var(--shadow);
-        }
-
-        .rank-badge {
-            position: absolute;
-            top: 0;
-            right: 0;
-            background: var(--gold);
-            color: #000;
-            padding: 0.2rem 0.8rem;
-            font-size: 0.75rem;
-            font-weight: 800;
-            border-bottom-left-radius: 12px;
-        }
-        
-        .rank-badge.boots {
-            background: var(--accent);
-            color: #fff;
-        }
-
-        .item-name { font-size: 1.2rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.3rem; }
-        .item-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.8rem; }
-        .tag { font-size: 0.7rem; padding: 0.1rem 0.5rem; border-radius: 4px; background: rgba(59, 130, 246, 0.2); color: #93c5fd; }
-        .tag.counter { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
-        
-        .reason-list { margin-left: 1.2rem; margin-bottom: 0.5rem; }
-        .reason-list li { margin-bottom: 0.4rem; font-size: 0.9rem; color: var(--text-muted); line-height: 1.4; }
-        
-        .highlight { color: var(--gold); font-weight: 500; }
-
-        /* Error Screen */
-        .error-screen {
-            display: none;
-            text-align: center;
-            padding: 4rem 1rem;
-            color: var(--text-muted);
-        }
-        .error-screen.active { display: block; }
-        
-        #error-debug-msg {
-            color: var(--danger);
-            background: rgba(239, 68, 68, 0.1);
-            padding: 10px;
-            border-radius: 8px;
-            margin: 1rem 0;
-            font-family: monospace;
-            font-size: 0.8rem;
-            word-break: break-all;
-        }
-
-        .btn-demo {
-            margin-top: 1.5rem;
-            background: var(--accent);
-            color: white;
-            border: none;
-            padding: 0.8rem 1.5rem;
-            border-radius: var(--radius);
-            font-weight: 600;
-            cursor: pointer;
-        }
-        
-        .btn-test-link {
-            background: transparent;
-            color: var(--accent);
-            border: 1px solid var(--accent);
-            margin-top: 0.5rem;
-            padding: 0.5rem 1rem;
-            border-radius: var(--radius);
-            cursor: pointer;
-            font-size: 0.85rem;
-        }
-
-    </style>
-</head>
-<body>
-
-<header>
-    <div>
-        <h1>MLBB Item Rec</h1>
-        <div class="meta-info" id="data-version">Connecting...</div>
-    </div>
-    <button id="sync-btn" class="btn-refresh" onclick="app.refreshData()">↻ Sync</button>
-</header>
-
-<!-- Error / Welcome View -->
-<div id="error-view" class="error-screen">
-    <h2 style="color:var(--text-main)">Welcome</h2>
-    <p style="margin-top:0.5rem">Connect to the internet to fetch the latest meta data.</p>
-    
-    <!-- ERROR MESSAGE DISPLAY -->
-    <div id="error-debug-msg" style="display:none"></div>
-    
-    <button class="btn-test-link" onclick="app.testLink()">Test Link in New Tab</button>
-    
-    <div style="margin-top:1rem; border-top:1px solid var(--border); padding-top:1rem;">
-        <p style="font-size: 0.85rem; opacity: 0.8">Or use demo data to test:</p>
-        <button class="btn-demo" onclick="app.loadDemoData()">Load Demo Data</button>
-    </div>
-</div>
-
-<!-- Main Application View -->
-<div id="main-view" class="container" style="display:none;">
-    
-    <!-- My Hero -->
-    <div class="panel">
-        <div class="panel-header">
-            <span class="panel-title">My Hero (Required)</span>
-        </div>
-        <div class="chip-container" id="hero-chips">
-            <!-- Chips injected here -->
-            <button class="add-btn" onclick="app.openPicker('hero')">+ Select Hero</button>
-        </div>
-    </div>
-
-    <!-- Allies (Optional for calculation, but good for future logic) -->
-    <div class="panel">
-        <div class="panel-header">
-            <span class="panel-title">Allies</span>
-            <span class="panel-count" id="ally-count">0/4</span>
-        </div>
-        <div class="chip-container" id="ally-chips">
-            <button class="add-btn" onclick="app.openPicker('ally')">+ Add Ally</button>
-        </div>
-    </div>
-
-    <!-- Enemies -->
-    <div class="panel">
-        <div class="panel-header">
-            <span class="panel-title">Enemies (Min 1)</span>
-            <span class="panel-count" id="enemy-count">0/5</span>
-        </div>
-        <div class="chip-container" id="enemy-chips">
-            <button class="add-btn" onclick="app.openPicker('enemy')">+ Add Enemy</button>
-        </div>
-    </div>
-
-    <!-- Results -->
-    <div id="results-area" class="results-container">
-        <!-- Result Cards Injected Here -->
-    </div>
-
-</div>
-
-<div class="action-area">
-    <button id="btn-recommend" class="btn-main" onclick="app.calculate()" disabled>Recommend Items</button>
-</div>
-
-<!-- Picker Modal -->
-<div id="picker-modal" class="modal">
-    <div class="modal-header">
-        <input type="text" id="search-box" class="search-input" placeholder="Search hero..." autocomplete="off" onkeyup="app.filterList()">
-        <button class="btn-close" onclick="app.closePicker()">✕</button>
-    </div>
-    <div id="picker-list" class="modal-list"></div>
-</div>
-
-<script>
-/**
- * MLBB Item Recommender
- * Single file vanilla JS implementation
- */
-
-// --- Constants & Config ---
-const CONFIG = {
-    // Configured for user: spitwats, repo: mlbb-app
-    DATA_URL: "https://spitwats.github.io/mlbb-app/mlbb-data.json", 
-    CACHE_KEY: "mlbb_data_cache",
-    META_KEY: "mlbb_data_meta_cache",
-    
-    // UPDATED SCORING WEIGHTS
-    W_SYNERGY: 3.0,  // Priority 1: Match own hero style (Core items)
-    W_COUNTER: 2.0,  // Priority 2: Counter enemy (Situational items)
-    W_TEAM: 0.5,     // Priority 3: Fill team gaps
-};
-
-// --- App State ---
-const state = {
-    data: null, // { heroes: [], items: [], meta: {} }
-    selection: {
-        hero: null, // Single ID
-        allies: [], // Array of IDs
-        enemies: [] // Array of IDs
-    },
-    pickerMode: null // 'hero', 'ally', 'enemy'
-};
-
-// --- Core App Logic ---
-const app = {
-    init: async () => {
-        // Try to load from Cache first for immediate render
-        const cached = localStorage.getItem(CONFIG.CACHE_KEY);
-        const meta = localStorage.getItem(CONFIG.META_KEY);
-
-        if (cached && meta) {
-            try {
-                const parsedData = JSON.parse(cached);
-                // Simple validation
-                if(!parsedData.heroes || !parsedData.items) throw new Error("Invalid cache");
-                
-                state.data = parsedData;
-                // Render meta with full counts
-                app.renderMeta(JSON.parse(meta), parsedData.heroes.length, parsedData.items.length);
-                app.showMain();
-                
-                // Background fetch to update
-                app.fetchData(true); 
-            } catch (e) {
-                console.error("Cache corrupted", e);
-                app.fetchData(); // Try fresh fetch
-            }
-        } else {
-            // No cache, fetch immediately
-            app.fetchData();
-        }
-    },
-    
-    testLink: () => {
-        window.open(CONFIG.DATA_URL, '_blank');
-    },
-
-    // silentMode = true means don't show error screen if fail, just log
-    fetchData: async (silentMode = false) => {
-        const btn = document.getElementById('sync-btn');
-        const statusEl = document.getElementById('data-version');
-        const ts = new Date().getTime();
-        
-        // Feedback: Start
-        if(btn) {
-            btn.innerText = "Syncing...";
-            btn.disabled = true;
-        }
-
-        try {
-            // Allow 5 seconds for fetch before timing out
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
-            
-            const res = await fetch(`${CONFIG.DATA_URL}?t=${ts}`, { signal: controller.signal });
-            clearTimeout(timeoutId);
-
-            if (!res.ok) {
-                 if(res.status === 404) throw new Error("File not found (404).\nCheck GitHub Pages deployment or filename.");
-                 throw new Error(`HTTP Error ${res.status}`);
-            }
-            
-            // Try parsing JSON - catch errors here specifically
-            let json;
-            try {
-                json = await res.json();
-            } catch (parseErr) {
-                throw new Error("Invalid JSON Format. Your data file might contain text or HTML instead of JSON.\n\nDetails: " + parseErr.message);
-            }
-            
-            // Validate Schema
-            if (!json.heroes || !json.items || !json.meta) throw new Error("Invalid Data Schema: Missing heroes/items arrays.");
-
-            // Save to Cache
-            localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify(json));
-            localStorage.setItem(CONFIG.META_KEY, JSON.stringify(json.meta));
-            
-            state.data = json;
-            
-            // Success: Update UI with counts
-            app.renderMeta(json.meta, json.heroes.length, json.items.length);
-            app.showMain();
-
-            // Feedback: Success
-            if(btn) {
-                btn.innerText = "✓ Updated";
-                btn.style.borderColor = "var(--success)";
-                setTimeout(() => { 
-                    btn.innerText = "↻ Sync"; 
-                    btn.disabled = false;
-                    btn.style.borderColor = "var(--border)";
-                }, 2000);
-            }
-
-        } catch (err) {
-            console.warn("Fetch failed:", err);
-            
-            if(!silentMode) {
-                // Keep error handling user-friendly
-                // alert("SYNC ERROR:\n" + err.message + "\n\nChecking URL:\n" + CONFIG.DATA_URL);
-            }
-            
-            // Feedback: Failure
-            if(btn) {
-                btn.innerText = "⚠ Failed";
-                btn.style.borderColor = "var(--danger)";
-                setTimeout(() => { 
-                    btn.innerText = "↻ Retry"; 
-                    btn.disabled = false;
-                    btn.style.borderColor = "var(--border)";
-                }, 2000);
-            }
-            
-            if (state.data) {
-                 statusEl.innerHTML = `<span style="color:var(--text-muted)">● Offline (Cache: ${state.data.heroes.length} Heroes)</span>`;
-            } else if (!silentMode) {
-                statusEl.innerText = "Offline";
-                // PASS ERROR TO SHOWERROR
-                app.showError(err.message);
-            }
-        }
-    },
-
-    refreshData: () => {
-        app.fetchData(false);
-    },
-
-    loadDemoData: () => {
-        // High quality demo data matching the JSON schema
-        const demoData = {
-            meta: { patch: "Demo Mode", generated_at: new Date().toISOString().split('T')[0] },
-            heroes: [
-                { id: "h_tig", name: "Tigreal", role: "Tank", style_tags: ["tank_scaling", "cooldown"], threat_tags: ["high_cc", "tank_heavy"] },
-                { id: "h_lay", name: "Layla", role: "Marksman", style_tags: ["basic_attack_reliant", "crit"], threat_tags: ["high_burst", "phys_heavy"] },
-                { id: "h_est", name: "Estes", role: "Support", style_tags: ["sustain", "cooldown"], threat_tags: ["healing"] },
-                { id: "h_sab", name: "Saber", role: "Assassin", style_tags: ["burst", "mobility"], threat_tags: ["high_burst", "lockdown"] },
-                { id: "h_eud", name: "Eudora", role: "Mage", style_tags: ["burst", "magic_heavy"], threat_tags: ["high_burst", "magic_heavy"] },
-                { id: "h_esm", name: "Esmeralda", role: "Mage", style_tags: ["sustain", "shielding"], threat_tags: ["shielding", "magic_heavy"] },
-                { id: "h_cho", name: "Chou", role: "Fighter", style_tags: ["mobility", "burst"], threat_tags: ["mobile", "high_cc"] }
-            ],
-            items: [
-                { id: "i_dom", name: "Dominance Ice", category: "defense", counter_tags: ["healing", "shielding", "basic_attack_reliant"], synergy_tags: ["tank_scaling", "mana_hungry"], tags: ["anti_heal"] },
-                { id: "i_ath", name: "Athena's Shield", category: "defense", counter_tags: ["high_burst", "magic_heavy"], synergy_tags: ["tank_scaling"], tags: ["magic_res"] },
-                { id: "i_won", name: "Wind of Nature", category: "attack", counter_tags: ["phys_heavy", "high_burst"], synergy_tags: ["basic_attack_reliant"], tags: ["immunity"] },
-                { id: "i_ant", name: "Antique Cuirass", category: "defense", counter_tags: ["phys_heavy", "burst"], synergy_tags: ["tank_scaling"], tags: ["armor"] },
-                { id: "i_mal", name: "Malefic Roar", category: "attack", counter_tags: ["tank_heavy", "high_def"], synergy_tags: ["burst", "phys_damage"], tags: ["pen"] },
-                { id: "i_sea", name: "Sea Halberd", category: "attack", counter_tags: ["healing", "hp_stack_punish"], synergy_tags: ["attack_speed"], tags: ["anti_heal"] },
-                { id: "i_rad", name: "Radiant Armor", category: "defense", counter_tags: ["magic_heavy"], synergy_tags: ["sustain"], tags: ["magic_def"] },
-                { id: "i_tough", name: "Tough Boots", category: "movement", counter_tags: ["high_cc", "magic_heavy"], synergy_tags: ["mobility"], tags: ["cc_reduction"] },
-                { id: "i_warrior", name: "Warrior Boots", category: "movement", counter_tags: ["phys_heavy", "basic_attack_reliant"], synergy_tags: ["mobility"], tags: ["phys_def"] }
-            ]
-        };
-        
-        localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify(demoData));
-        localStorage.setItem(CONFIG.META_KEY, JSON.stringify(demoData.meta));
-        state.data = demoData;
-        app.renderMeta(demoData.meta, demoData.heroes.length, demoData.items.length);
-        app.showMain();
-    },
-
-    // --- UI Rendering ---
-
-    renderMeta: (meta, heroCount, itemCount) => {
-        // Updated to show counts clearly
-        const statusEl = document.getElementById('data-version');
-        const countText = `(${heroCount} Heroes, ${itemCount} Items)`;
-        
-        // If it's demo mode, just show Demo
-        if (meta.patch === "Demo Mode") {
-            statusEl.innerText = `Demo Mode ${countText}`;
-        } else {
-             statusEl.innerHTML = `<span style="color:var(--success)">● Online</span> Patch ${meta.patch} ${countText}`;
-        }
-    },
-
-    showMain: () => {
-        document.getElementById('error-view').style.display = 'none';
-        document.getElementById('main-view').style.display = 'block';
-        app.updateUI();
-    },
-
-    showError: (msg) => {
-        document.getElementById('main-view').style.display = 'none';
-        const errView = document.getElementById('error-view');
-        errView.classList.add('active');
-        
-        const debugBox = document.getElementById('error-debug-msg');
-        if (msg) {
-            debugBox.innerText = "DEBUG INFO: " + msg;
-            debugBox.style.display = 'block';
-        } else {
-            debugBox.style.display = 'none';
-        }
-    },
-
-    updateUI: () => {
-        const { hero, allies, enemies } = state.selection;
-        const heroesMap = new Map(state.data.heroes.map(h => [h.id, h]));
-
-        // 1. Render Hero
-        const heroContainer = document.getElementById('hero-chips');
-        heroContainer.innerHTML = '';
-        if (hero) {
-            const h = heroesMap.get(hero);
-            heroContainer.innerHTML = `<div class="chip" style="border-color:var(--accent)">${h.name} <span class="chip-remove" onclick="app.removeSelection('hero', '${h.id}')">×</span></div>`;
-        } else {
-            heroContainer.innerHTML = `<button class="add-btn" onclick="app.openPicker('hero')">+ Select Hero</button>`;
-        }
-
-        // 2. Render Allies
-        const allyContainer = document.getElementById('ally-chips');
-        allyContainer.innerHTML = allies.map(id => {
-            const h = heroesMap.get(id);
-            return `<div class="chip">${h.name} <span class="chip-remove" onclick="app.removeSelection('ally', '${id}')">×</span></div>`;
-        }).join('');
-        if (allies.length < 4) {
-            allyContainer.innerHTML += `<button class="add-btn" onclick="app.openPicker('ally')">+ Add Ally</button>`;
-        }
-        document.getElementById('ally-count').innerText = `${allies.length}/4`;
-
-        // 3. Render Enemies
-        const enemyContainer = document.getElementById('enemy-chips');
-        enemyContainer.innerHTML = enemies.map(id => {
-            const h = heroesMap.get(id);
-            return `<div class="chip" style="border-color:var(--danger)">${h.name} <span class="chip-remove" onclick="app.removeSelection('enemy', '${id}')">×</span></div>`;
-        }).join('');
-        if (enemies.length < 5) {
-            enemyContainer.innerHTML += `<button class="add-btn" onclick="app.openPicker('enemy')">+ Add Enemy</button>`;
-        }
-        document.getElementById('enemy-count').innerText = `${enemies.length}/5`;
-
-        // 4. Update Button State
-        const btn = document.getElementById('btn-recommend');
-        if (hero && enemies.length >= 1) {
-            btn.disabled = false;
-            btn.innerText = `Recommend Items vs ${enemies.length} Enemies`;
-        } else {
-            btn.disabled = true;
-            btn.innerText = "Select Hero & 1+ Enemy";
-        }
-    },
-
-    // --- Picker Logic ---
-    openPicker: (mode) => {
-        state.pickerMode = mode;
-        const modal = document.getElementById('picker-modal');
-        const search = document.getElementById('search-box');
-        modal.classList.add('active');
-        search.value = '';
-        setTimeout(() => search.focus(), 100); // Small delay for mobile keyboard
-        app.renderList('');
-    },
-
-    closePicker: () => {
-        document.getElementById('picker-modal').classList.remove('active');
-        state.pickerMode = null;
-    },
-
-    filterList: () => {
-        const query = document.getElementById('search-box').value.toLowerCase();
-        app.renderList(query);
-    },
-
-    renderList: (query) => {
-        const listEl = document.getElementById('picker-list');
-        const { hero, allies, enemies } = state.selection;
-        
-        // Filter out already selected heroes
-        const selectedIds = new Set([hero, ...allies, ...enemies].filter(x => x));
-
-        // Sorting: Name A-Z
-        const sorted = [...state.data.heroes].sort((a,b) => a.name.localeCompare(b.name));
-
-        const filtered = sorted.filter(h => {
-            if (selectedIds.has(h.id)) return false;
-            const role = Array.isArray(h.roles) ? h.roles.join(' ') : h.role;
-            return h.name.toLowerCase().includes(query) || role.toLowerCase().includes(query);
-        });
-
-        if (filtered.length === 0) {
-            listEl.innerHTML = '<div style="padding:1rem; color:var(--text-muted); text-align:center">No heroes found</div>';
-            return;
-        }
-
-        listEl.innerHTML = filtered.map(h => {
-            const roleDisplay = Array.isArray(h.roles) ? h.roles.join('/') : h.role;
-            return `
-            <div class="list-item" onclick="app.selectItem('${h.id}')">
-                <span style="font-weight:600">${h.name}</span>
-                <span class="list-item-role">${roleDisplay}</span>
-            </div>
-        `}).join('');
-    },
-
-    selectItem: (id) => {
-        const mode = state.pickerMode;
-        if (mode === 'hero') state.selection.hero = id;
-        if (mode === 'ally') state.selection.allies.push(id);
-        if (mode === 'enemy') state.selection.enemies.push(id);
-        
-        app.closePicker();
-        app.updateUI();
-        
-        // Clear results if selection changes (forces re-calculation)
-        document.getElementById('results-area').classList.remove('active');
-        document.getElementById('results-area').innerHTML = '';
-    },
-
-    removeSelection: (type, id) => {
-        if (type === 'hero') state.selection.hero = null;
-        if (type === 'ally') state.selection.allies = state.selection.allies.filter(x => x !== id);
-        if (type === 'enemy') state.selection.enemies = state.selection.enemies.filter(x => x !== id);
-        
-        app.updateUI();
-        document.getElementById('results-area').classList.remove('active');
-        document.getElementById('results-area').innerHTML = '';
-    },
-
-    // --- Recommendation Logic (The Brain) ---
-    calculate: () => {
-        const myHero = state.data.heroes.find(h => h.id === state.selection.hero);
-        const enemyHeroes = state.selection.enemies.map(id => state.data.heroes.find(h => h.id === id));
-        
-        // Determine hero damage type to filter items
-        const isMagicHero = myHero.damage_type === "magic";
-        const isPhysHero = myHero.damage_type === "physical";
-        const isTankOrFighter = myHero.roles.includes("Tank") || myHero.roles.includes("Fighter");
-
-        // Helper to score a list of items
-        const scoreItems = (itemList) => {
-            return itemList.map(item => {
-                let score = 0;
-                let reasons = [];
-                
-                // 0. HARD FILTER: Damage Type Mismatch
-                if (isMagicHero && item.category === "attack") return { item, score: -1, reasons: [] };
-                if (isPhysHero && item.category === "magic") return { item, score: -1, reasons: [] };
-
-                // 1. Synergy Score (Self Fit) - Priority 1
-                if (item.synergy_tags && myHero.style_tags) {
-                    const matches = item.synergy_tags.filter(tag => myHero.style_tags.includes(tag));
-                    if (matches.length > 0) {
-                        score += (CONFIG.W_SYNERGY * matches.length);
-                        reasons.push(`Synergy: <span class="highlight">${myHero.name}</span> uses ${matches[0].replace(/_/g, ' ')}`);
-                    }
-                }
-
-                // 2. Counter Score (Defensive/Offensive Counters) - Priority 2
-                if (item.counter_tags) {
-                    enemyHeroes.forEach(enemy => {
-                        if (!enemy.threat_tags) return;
-                        
-                        const matches = item.counter_tags.filter(tag => enemy.threat_tags.includes(tag));
-                        if (matches.length > 0) {
-                            score += (CONFIG.W_COUNTER * matches.length);
-                            const threatName = matches[0].replace(/_/g, ' ');
-                            reasons.push(`Counters <span class="highlight">${enemy.name}</span> (${threatName})`);
-                        }
-                    });
-                }
-                
-                // 3. Role Bias for Defense Items (Only applied to Core items, not Boots)
-                if (item.category === "defense" && !isTankOrFighter && item.category !== "movement") {
-                    score -= 1.0; 
-                }
-                
-                // Dedupe reasons
-                reasons = [...new Set(reasons)];
-
-                return { item, score, reasons };
-            });
-        };
-
-        // Separate items into Pools
-        const bootsPool = state.data.items.filter(i => i.category === 'movement');
-        const corePool = state.data.items.filter(i => i.category !== 'movement' && i.category !== 'jungle' && i.category !== 'roam');
-
-        // Score Pools separately
-        const scoredBoots = scoreItems(bootsPool).sort((a,b) => b.score - a.score);
-        const scoredCore = scoreItems(corePool).sort((a,b) => b.score - a.score);
-
-        // Select Results: 1 Boot + 3 Core
-        const finalResults = [];
-
-        // 1. Best Boots
-        if (scoredBoots.length > 0) {
-            const bestBoot = scoredBoots[0];
-            // If no reason found (score 0), give generic reason
-            if (bestBoot.reasons.length === 0) bestBoot.reasons.push("Standard movement item.");
-            bestBoot.isBoots = true;
-            finalResults.push(bestBoot);
-        }
-
-        // 2. Top 3 Core Items
-        // Filter out anything with score < 0 (hard filtered)
-        const validCore = scoredCore.filter(x => x.score > -1);
-        const top3Core = validCore.slice(0, 3);
-        
-        // Fallback for core items
-        if (top3Core.length < 3) {
-             const remaining = validCore.filter(x => !top3Core.includes(x)).slice(0, 3 - top3Core.length);
-             remaining.forEach(r => {
-                 r.reasons.push("General high-value item.");
-                 top3Core.push(r);
-             });
-        }
-        
-        finalResults.push(...top3Core);
-
-        app.renderResults(finalResults);
-    },
-
-    renderResults: (results) => {
-        const container = document.getElementById('results-area');
-        container.innerHTML = '<h3 style="margin-bottom:1rem; color:var(--text-main)">Recommended Build</h3>';
-        
-        if (results.length === 0) {
-            container.innerHTML += '<p style="color:var(--text-muted)">No recommendations found.</p>';
-            container.classList.add('active');
-            return;
-        }
-
-        results.forEach((res, index) => {
-            const item = res.item;
-            const displayReasons = res.reasons.slice(0, 3); // Max 3 bullets
-
-            // Tags display
-            const counterTags = (item.counter_tags || []).filter(t => res.reasons.some(r => r.includes(t.replace(/_/g,' ')))); 
-            const displayTags = (item.tags || []).slice(0,3);
-            
-            // Labels
-            let badgeText = `#${index} CHOICE`;
-            let badgeClass = "rank-badge";
-            
-            if (res.isBoots) {
-                badgeText = "BEST BOOTS";
-                badgeClass += " boots";
-            } else {
-                // Adjust index for core items (since boots is index 0)
-                badgeText = `#${index} CORE ITEM`;
-            }
-
-            const html = `
-            <div class="result-card">
-                <div class="${badgeClass}">${badgeText}</div>
-                <div class="item-name">${item.name}</div>
-                <div class="item-tags">
-                    ${displayTags.map(t => `<span class="tag">${t}</span>`).join('')}
-                    ${counterTags.map(t => `<span class="tag counter">${t}</span>`).join('')}
-                </div>
-                <ul class="reason-list">
-                    ${displayReasons.map(r => `<li>${r}</li>`).join('')}
-                </ul>
-            </div>
-            `;
-            container.innerHTML += html;
-        });
-
-        container.classList.add('active');
-        
-        // Scroll to results
-        setTimeout(() => {
-             container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }, 100);
-    }
-};
-
-// Initialize App
-document.addEventListener('DOMContentLoaded', app.init);
-
-</script>
-</body>
-</html>
 
