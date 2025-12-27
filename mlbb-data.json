@@ -1,0 +1,430 @@
+{
+  "meta": {
+    "game": "Mobile Legends: Bang Bang",
+    "patch": "1.9.44 / Season 35",
+    "generated_at": "2025-12-25T19:00:00Z",
+    "source_notes": "Data approximates Season 35 meta."
+  },
+  "tags": {
+    "enemy_threat_tags": [
+      "healing",
+      "crit_reliant",
+      "high_burst",
+      "high_cc",
+      "mobile",
+      "tank_heavy",
+      "basic_attack_reliant",
+      "magic_heavy",
+      "phys_heavy",
+      "shielding",
+      "sustain_fighters",
+      "suppression",
+      "true_damage"
+    ],
+    "hero_synergy_tags": [
+      "attack_speed",
+      "crit",
+      "burst",
+      "poke",
+      "sustain",
+      "cooldown",
+      "spell_vamp",
+      "lifesteal",
+      "tank_scaling",
+      "true_damage",
+      "on_hit",
+      "kiting",
+      "mana_hungry",
+      "hybrid_defense"
+    ],
+    "item_counter_tags": [
+      "anti_heal",
+      "anti_crit",
+      "anti_burst",
+      "magic_def",
+      "phys_def",
+      "cc_reduction",
+      "shield_break",
+      "hp_stack_punish",
+      "mobility",
+      "slow",
+      "anti_true_damage"
+    ]
+  },
+  "heroes": [
+    {
+      "id": "hero_estes",
+      "name": "Estes",
+      "roles": ["Support"],
+      "damage_type": "magic",
+      "style_tags": ["cooldown", "sustain"],
+      "threat_tags": ["healing"]
+    },
+    {
+      "id": "hero_miya",
+      "name": "Miya",
+      "roles": ["Marksman"],
+      "damage_type": "physical",
+      "style_tags": ["attack_speed", "crit"],
+      "threat_tags": ["basic_attack_reliant", "high_burst"]
+    },
+    {
+      "id": "hero_saber",
+      "name": "Saber",
+      "roles": ["Assassin"],
+      "damage_type": "physical",
+      "style_tags": ["burst", "cooldown"],
+      "threat_tags": ["high_burst", "mobile"]
+    },
+    {
+      "id": "hero_tigreal",
+      "name": "Tigreal",
+      "roles": ["Tank"],
+      "damage_type": "physical",
+      "style_tags": ["tank_scaling", "cooldown"],
+      "threat_tags": ["high_cc", "tank_heavy"]
+    },
+    {
+      "id": "hero_eudora",
+      "name": "Eudora",
+      "roles": ["Mage"],
+      "damage_type": "magic",
+      "style_tags": ["burst", "cooldown"],
+      "threat_tags": ["high_burst", "magic_heavy"]
+    },
+    {
+      "id": "hero_esmeralda",
+      "name": "Esmeralda",
+      "roles": ["Mage", "Tank"],
+      "damage_type": "mixed",
+      "style_tags": ["cooldown", "sustain", "tank_scaling"],
+      "threat_tags": ["shielding", "sustain_fighters", "magic_heavy"]
+    },
+    {
+      "id": "hero_franco",
+      "name": "Franco",
+      "roles": ["Tank", "Support"],
+      "damage_type": "physical",
+      "style_tags": ["tank_scaling", "cooldown", "mobility"],
+      "threat_tags": ["high_cc", "suppression", "tank_heavy"]
+    },
+    {
+      "id": "hero_ling",
+      "name": "Ling",
+      "roles": ["Assassin"],
+      "damage_type": "physical",
+      "style_tags": ["burst", "crit", "kiting"],
+      "threat_tags": ["mobile", "high_burst", "phys_heavy"]
+    },
+    {
+      "id": "hero_uranus",
+      "name": "Uranus",
+      "roles": ["Tank"],
+      "damage_type": "magic",
+      "style_tags": ["sustain", "tank_scaling"],
+      "threat_tags": ["healing", "tank_heavy", "sustain_fighters"]
+    },
+    {
+      "id": "hero_fanny",
+      "name": "Fanny",
+      "roles": ["Assassin"],
+      "damage_type": "physical",
+      "style_tags": ["burst", "spell_vamp"],
+      "threat_tags": ["mobile", "high_burst", "phys_heavy"]
+    },
+    {
+      "id": "hero_wanwan",
+      "name": "Wanwan",
+      "roles": ["Marksman"],
+      "damage_type": "physical",
+      "style_tags": ["attack_speed", "on_hit", "kiting"],
+      "threat_tags": ["mobile", "basic_attack_reliant", "true_damage"]
+    },
+    {
+      "id": "hero_valir",
+      "name": "Valir",
+      "roles": ["Mage"],
+      "damage_type": "magic",
+      "style_tags": ["poke", "cooldown"],
+      "threat_tags": ["magic_heavy", "high_cc"]
+    },
+    {
+      "id": "hero_chou",
+      "name": "Chou",
+      "roles": ["Fighter"],
+      "damage_type": "physical",
+      "style_tags": ["burst", "mobility"],
+      "threat_tags": ["high_cc", "mobile", "phys_heavy"]
+    },
+    {
+      "id": "hero_hanabi",
+      "name": "Hanabi",
+      "roles": ["Marksman"],
+      "damage_type": "physical",
+      "style_tags": ["attack_speed", "lifesteal"],
+      "threat_tags": ["basic_attack_reliant", "shielding"]
+    },
+    {
+      "id": "hero_yu_zhong",
+      "name": "Yu Zhong",
+      "roles": ["Fighter"],
+      "damage_type": "physical",
+      "style_tags": ["sustain", "spell_vamp"],
+      "threat_tags": ["sustain_fighters", "phys_heavy"]
+    },
+    {
+      "id": "hero_ruby",
+      "name": "Ruby",
+      "roles": ["Fighter", "Tank"],
+      "damage_type": "physical",
+      "style_tags": ["lifesteal", "cooldown", "cc"],
+      "threat_tags": ["high_cc", "sustain_fighters"]
+    },
+    {
+      "id": "hero_phoveus",
+      "name": "Phoveus",
+      "roles": ["Fighter"],
+      "damage_type": "magic",
+      "style_tags": ["tank_scaling", "burst"],
+      "threat_tags": ["magic_heavy", "shielding"]
+    },
+    {
+      "id": "hero_natalia",
+      "name": "Natalia",
+      "roles": ["Assassin"],
+      "damage_type": "physical",
+      "style_tags": ["burst", "kiting"],
+      "threat_tags": ["high_burst", "mobile"]
+    },
+    {
+      "id": "hero_johnson",
+      "name": "Johnson",
+      "roles": ["Tank"],
+      "damage_type": "magic",
+      "style_tags": ["tank_scaling", "magic_damage"],
+      "threat_tags": ["tank_heavy", "shielding", "magic_heavy"]
+    },
+    {
+      "id": "hero_dyrroth",
+      "name": "Dyrroth",
+      "roles": ["Fighter"],
+      "damage_type": "physical",
+      "style_tags": ["burst", "lifesteal"],
+      "threat_tags": ["phys_heavy", "high_burst"]
+    },
+    {
+      "id": "hero_lesley",
+      "name": "Lesley",
+      "roles": ["Marksman", "Assassin"],
+      "damage_type": "mixed",
+      "style_tags": ["burst", "crit", "true_damage"],
+      "threat_tags": ["true_damage", "high_burst"]
+    },
+    {
+      "id": "hero_cecilion",
+      "name": "Cecilion",
+      "roles": ["Mage"],
+      "damage_type": "magic",
+      "style_tags": ["mana_hungry", "burst", "poke"],
+      "threat_tags": ["magic_heavy", "high_burst"]
+    },
+    {
+      "id": "hero_karrie",
+      "name": "Karrie",
+      "roles": ["Marksman"],
+      "damage_type": "physical",
+      "style_tags": ["attack_speed", "true_damage"],
+      "threat_tags": ["true_damage", "tank_heavy"]
+    },
+    {
+      "id": "hero_hylos",
+      "name": "Hylos",
+      "roles": ["Tank"],
+      "damage_type": "magic",
+      "style_tags": ["tank_scaling", "sustain"],
+      "threat_tags": ["tank_heavy", "magic_heavy"]
+    }
+  ],
+  "items": [
+    {
+      "id": "item_dominance_ice",
+      "name": "Dominance Ice",
+      "category": "defense",
+      "timing": "early",
+      "passive_summary": "Reduces nearby enemy Attack Speed and Healing.",
+      "counter_tags": ["anti_heal", "healing", "basic_attack_reliant", "shielding"],
+      "synergy_tags": ["tank_scaling", "mana_hungry", "cooldown"]
+    },
+    {
+      "id": "item_athena_shield",
+      "name": "Athena's Shield",
+      "category": "defense",
+      "timing": "mid",
+      "passive_summary": "Triggers huge Magic Defense when taking Magic Damage.",
+      "counter_tags": ["magic_def", "high_burst", "magic_heavy"],
+      "synergy_tags": ["tank_scaling", "hybrid_defense"]
+    },
+    {
+      "id": "item_radiant_armor",
+      "name": "Radiant Armor",
+      "category": "defense",
+      "timing": "mid",
+      "passive_summary": "Stacks Magic Defense when taking continuous Magic Damage.",
+      "counter_tags": ["magic_def", "magic_heavy"],
+      "synergy_tags": ["tank_scaling", "sustain"]
+    },
+    {
+      "id": "item_antique_cuirass",
+      "name": "Antique Cuirass",
+      "category": "defense",
+      "timing": "mid",
+      "passive_summary": "Reduces enemy Physical Attack when hit by skills.",
+      "counter_tags": ["phys_def", "phys_heavy", "high_burst"],
+      "synergy_tags": ["tank_scaling", "hp_scaling"]
+    },
+    {
+      "id": "item_blade_armor",
+      "name": "Blade Armor",
+      "category": "defense",
+      "timing": "mid",
+      "passive_summary": "Reflects Basic Attack damage and slows enemy.",
+      "counter_tags": ["anti_crit", "basic_attack_reliant", "crit_reliant", "phys_def"],
+      "synergy_tags": ["tank_scaling"]
+    },
+    {
+      "id": "item_sea_halberd",
+      "name": "Sea Halberd",
+      "category": "attack",
+      "timing": "early",
+      "passive_summary": "Reduces enemy Healing and Shield. Increases damage to high HP enemies.",
+      "counter_tags": ["anti_heal", "healing", "shield_break", "tank_heavy", "hp_stack_punish"],
+      "synergy_tags": ["attack_speed", "on_hit"]
+    },
+    {
+      "id": "item_necklace_durance",
+      "name": "Necklace of Durance",
+      "category": "magic",
+      "timing": "mid",
+      "passive_summary": "Reduces enemy Healing and Shield on damage.",
+      "counter_tags": ["anti_heal", "healing", "shield_break"],
+      "synergy_tags": ["cooldown", "poke", "magic_damage"]
+    },
+    {
+      "id": "item_demon_hunter",
+      "name": "Demon Hunter Sword",
+      "category": "attack",
+      "timing": "early",
+      "passive_summary": "Basic attacks deal % Current HP damage.",
+      "counter_tags": ["hp_stack_punish", "tank_heavy"],
+      "synergy_tags": ["attack_speed", "on_hit"]
+    },
+    {
+      "id": "item_malefic_roar",
+      "name": "Malefic Roar",
+      "category": "attack",
+      "timing": "late",
+      "passive_summary": "High Physical Penetration based on enemy Defense.",
+      "counter_tags": ["tank_heavy", "phys_def"],
+      "synergy_tags": ["burst", "phys_damage"]
+    },
+    {
+      "id": "item_winter_crown",
+      "name": "Winter Crown",
+      "category": "magic",
+      "timing": "late",
+      "passive_summary": "Active skill: Freeze yourself to become immune.",
+      "counter_tags": ["anti_burst", "high_burst", "lockdown"],
+      "synergy_tags": ["magic_damage", "burst"]
+    },
+    {
+      "id": "item_wind_nature",
+      "name": "Wind of Nature",
+      "category": "attack",
+      "timing": "late",
+      "passive_summary": "Active skill: Immune to Physical Damage (Marksman only).",
+      "counter_tags": ["anti_burst", "phys_heavy"],
+      "synergy_tags": ["attack_speed", "lifesteal"]
+    },
+    {
+      "id": "item_rose_gold",
+      "name": "Rose Gold Meteor",
+      "category": "attack",
+      "timing": "late",
+      "passive_summary": "Grants shield when HP is low.",
+      "counter_tags": ["anti_burst", "magic_heavy"],
+      "synergy_tags": ["lifesteal", "attack_damage"]
+    },
+    {
+      "id": "item_immortality",
+      "name": "Immortality",
+      "category": "defense",
+      "timing": "late",
+      "passive_summary": "Resurrect upon death.",
+      "counter_tags": ["anti_burst", "high_burst"],
+      "synergy_tags": ["tank_scaling"]
+    },
+    {
+      "id": "item_oracle",
+      "name": "Oracle",
+      "category": "defense",
+      "timing": "mid",
+      "passive_summary": "Increases shield absorption and HP regen.",
+      "counter_tags": ["magic_def"],
+      "synergy_tags": ["sustain", "shielding", "cooldown"]
+    },
+    {
+      "id": "item_twilight_armor",
+      "name": "Twilight Armor",
+      "category": "defense",
+      "timing": "mid",
+      "passive_summary": "Limits single instance Physical Damage taken.",
+      "counter_tags": ["anti_burst", "phys_heavy", "true_damage"],
+      "synergy_tags": ["tank_scaling", "hp_scaling"]
+    },
+    {
+      "id": "item_corrosion_scythe",
+      "name": "Corrosion Scythe",
+      "category": "attack",
+      "timing": "early",
+      "passive_summary": "Basic attacks slow enemies.",
+      "counter_tags": ["slow", "mobility"],
+      "synergy_tags": ["attack_speed", "on_hit"]
+    },
+    {
+      "id": "item_ice_queen_wand",
+      "name": "Ice Queen Wand",
+      "category": "magic",
+      "timing": "mid",
+      "passive_summary": "Skills slow enemies.",
+      "counter_tags": ["slow", "mobility"],
+      "synergy_tags": ["poke", "magic_damage"]
+    },
+    {
+      "id": "item_glowing_wand",
+      "name": "Glowing Wand",
+      "category": "magic",
+      "timing": "mid",
+      "passive_summary": "Burns enemies for % HP damage. Reduces healing.",
+      "counter_tags": ["hp_stack_punish", "anti_heal", "healing"],
+      "synergy_tags": ["poke", "magic_damage"]
+    },
+    {
+      "id": "item_divine_glaive",
+      "name": "Divine Glaive",
+      "category": "magic",
+      "timing": "late",
+      "passive_summary": "High Magic Penetration.",
+      "counter_tags": ["tank_heavy", "magic_def"],
+      "synergy_tags": ["burst", "magic_damage"]
+    },
+    {
+      "id": "item_tough_boots",
+      "name": "Tough Boots",
+      "category": "movement",
+      "timing": "early",
+      "passive_summary": "Reduces Crowd Control duration.",
+      "counter_tags": ["cc_reduction", "high_cc", "magic_def"],
+      "synergy_tags": ["mobility"]
+    }
+  ]
+}
