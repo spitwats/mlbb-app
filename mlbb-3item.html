@@ -196,7 +196,7 @@
 
 <div id="error-view" class="error-screen">
     <h2>Data Unavailable</h2>
-    <p>Please sync with GitHub to load the latest 128+ Hero Roster.</p>
+    <p>Please sync with GitHub to load the latest 130+ Hero Roster.</p>
     <button class="btn-test-link" onclick="app.testLink()">Test Link</button>
     <br>
     <button class="btn-demo" onclick="app.loadDemoData()">Load Demo Data</button>
@@ -249,11 +249,11 @@ const CONFIG = {
     CACHE_KEY: "mlbb_data_cache_v5",
     META_KEY: "mlbb_data_meta_cache_v5",
     
-    // SCORING WEIGHTS
-    W_HARD_COUNTER: 4.5,
-    W_CORE_SYNERGY: 3.5,
-    W_SOFT_COUNTER: 2.0,
-    W_TEAM_UTILITY: 1.0
+    // ADVANCED WEIGHTS
+    W_HARD_COUNTER: 4.5,  // Critical Counter (e.g. Anti-Heal)
+    W_CORE_SYNERGY: 3.0,  // Necessary for hero function (e.g. Mana)
+    W_SOFT_COUNTER: 2.0,  // Good to have (e.g. Armor)
+    W_TEAM_UTILITY: 1.0   // Team buffs
 };
 
 const state = {
@@ -306,10 +306,11 @@ const app = {
     },
 
     loadDemoData: () => {
+        // Updated Demo Data with NoD removed logic
         const demo = {
             meta: { patch: "Demo Mode", generated_at: "Now" },
             heroes: [
-                 { id: "h_sora", name: "Sora", roles: ["Mage"], damage_type: "magic", style_tags: ["need_burst", "need_cdr"], threat_tags: ["burst_magic"] },
+                 { id: "h_kalea", name: "Kalea", roles: ["Marksman"], damage_type: "physical", style_tags: ["need_atk_speed", "need_crit"], threat_tags: ["dps_phys"] },
                  { id: "h_tig", name: "Tigreal", roles: ["Tank"], damage_type: "physical", style_tags: ["need_tankiness"], threat_tags: ["hard_cc", "high_hp"] }
             ],
             items: [
@@ -401,56 +402,43 @@ const app = {
         const isFighter = myHero.roles.includes("Fighter");
         const isSupport = myHero.roles.includes("Support");
         const isFrontline = isTank || isFighter;
-        
-        // SQUISHY GUARD: Pure Mages, MMs, Assassins (who aren't Tanks/Fighters)
-        const isSquishy = !isTank && !isFighter && !isSupport;
 
-        // Valid Survival Items Allowed for Squishies
-        const allowedSurvival = [
-            "i_winter_crown", 
-            "i_immortality", 
-            "i_rose_gold", 
-            "i_wind_nature", 
-            "i_athena_shield" // Only allowed via hard counter logic below
-        ];
+        // Valid Survival Items allowed on Squishies
+        const validSurvival = ["i_winter_crown", "i_immortality", "i_rose_gold", "i_athena_shield", "i_wind_nature", "i_queens_wings", "i_bruteforce", "i_antique_cuirass"];
 
         const scoreItem = (item) => {
             let score = 0;
             let reasons = [];
 
-            // --- 0. HARD FILTERS (Safety Net) ---
-            
-            // Damage Type Mismatch
-            if (isMagic && item.category === "attack" && item.id !== "i_wind_nature" && item.id !== "i_winter_crown") return { score: -99 };
+            // 0. Hard Filters (Safety)
+            if (isMagic && item.category === "attack") return { score: -99 };
             if (isPhys && item.category === "magic") return { score: -99 };
             
-            // Role Mismatch: Dominance Ice
-            // Block Dom Ice on Squishies completely. They should use Glowing Wand or Sea Halberd.
-            if (item.id === "i_dominance_ice" && isSquishy) return { score: -99 };
+            // DOMINANCE ICE FIX: Only for Frontliners/Supports. Mages/MMs should use Glowing/Sea Halberd.
+            if (item.id === "i_dominance_ice" && !isFrontline && !isSupport) return { score: -99 };
 
-            // Role Mismatch: Heavy Defense Items on Squishies
-            // Block things like Cuirass, Blade Armor, Guardian Helmet for pure damage dealers.
-            if (item.category === "defense" && isSquishy && !allowedSurvival.includes(item.id)) {
+            // GENERAL TANK ITEM FIX: Squishies shouldn't buy random tank items unless it's a Survival Item
+            if (item.category === "defense" && !isFrontline && !isSupport && !validSurvival.includes(item.id) && item.category !== "movement") {
                 return { score: -99 };
             }
 
-            // --- 1. CORE SYNERGY ---
+            // 1. Core Synergy
             if (item.synergy_tags && myHero.style_tags) {
                 const matches = item.synergy_tags.filter(t => myHero.style_tags.includes(t));
                 if (matches.length > 0) {
                     score += (CONFIG.W_CORE_SYNERGY * matches.length);
-                    reasons.push(`Core: Matches need for ${matches[0].replace(/need_/g, '').replace(/_/g, ' ')}`);
+                    reasons.push(`Synergy: ${matches[0].replace(/need_/g, '').replace(/_/g, ' ')}`);
                 }
             }
 
-            // --- 2. COUNTER LOGIC ---
+            // 2. Counter Logic
             if (item.counter_tags) {
                 enemies.forEach(e => {
                     const matches = item.counter_tags.filter(t => e.threat_tags.includes(t));
                     if (matches.length > 0) {
                         let weight = CONFIG.W_SOFT_COUNTER;
                         
-                        // Hard Counters (Boost Score)
+                        // Critical Counters Boost
                         if (matches.includes("high_healing") && item.counter_tags.includes("high_healing")) weight = CONFIG.W_HARD_COUNTER;
                         if (matches.includes("burst_magic") && item.name.includes("Athena")) weight = CONFIG.W_HARD_COUNTER;
                         if (matches.includes("hard_cc") && item.name.includes("Tough")) weight = CONFIG.W_HARD_COUNTER;
@@ -475,7 +463,7 @@ const app = {
         const results = [];
         if (rankedBoots[0]) {
             rankedBoots[0].isBoot = true;
-            if(rankedBoots[0].reasons.length === 0) rankedBoots[0].reasons.push("Best movement option.");
+            if(rankedBoots[0].reasons.length === 0) rankedBoots[0].reasons.push("Best available option.");
             results.push(rankedBoots[0]);
         }
         results.push(...rankedItems.slice(0, 3));
@@ -519,5 +507,3 @@ document.addEventListener('DOMContentLoaded', app.init);
 </script>
 </body>
 </html>
-
-
