@@ -196,7 +196,7 @@
 
 <div id="error-view" class="error-screen">
     <h2>Data Unavailable</h2>
-    <p>Please sync with GitHub to load the latest 130+ Hero Roster.</p>
+    <p>Please sync with GitHub to load the latest Hero Roster.</p>
     <button class="btn-test-link" onclick="app.testLink()">Test Link</button>
     <br>
     <button class="btn-demo" onclick="app.loadDemoData()">Load Demo Data</button>
@@ -250,10 +250,10 @@ const CONFIG = {
     META_KEY: "mlbb_data_meta_cache_v5",
     
     // ADVANCED WEIGHTS
-    W_HARD_COUNTER: 4.5,  // Critical Counter (e.g. Anti-Heal)
-    W_CORE_SYNERGY: 3.0,  // Necessary for hero function (e.g. Mana)
-    W_SOFT_COUNTER: 2.0,  // Good to have (e.g. Armor)
-    W_TEAM_UTILITY: 1.0   // Team buffs
+    W_HARD_COUNTER: 4.5,
+    W_CORE_SYNERGY: 3.0,
+    W_SOFT_COUNTER: 2.0,
+    W_TEAM_UTILITY: 1.0
 };
 
 const state = {
@@ -268,7 +268,9 @@ const app = {
         const meta = localStorage.getItem(CONFIG.META_KEY);
         if (cached && meta) {
             try {
-                const json = JSON.parse(cached);
+                let json = JSON.parse(cached);
+                // CLEAN DATA IMMEDIATELY
+                json = app.processData(json);
                 state.data = json;
                 app.renderMeta(JSON.parse(meta), json.heroes.length, json.items.length);
                 app.showMain();
@@ -281,6 +283,22 @@ const app = {
 
     testLink: () => { window.open(CONFIG.DATA_URL, '_blank'); },
 
+    // HELPER: Removes duplicates
+    processData: (json) => {
+        if(!json || !json.heroes) return json;
+        
+        // Use a Map to keep only unique IDs (Last one wins or First one wins)
+        const heroMap = new Map();
+        json.heroes.forEach(h => heroMap.set(h.id, h));
+        json.heroes = Array.from(heroMap.values());
+        
+        const itemMap = new Map();
+        json.items.forEach(i => itemMap.set(i.id, i));
+        json.items = Array.from(itemMap.values());
+        
+        return json;
+    },
+
     fetchData: async (silent = false) => {
         const btn = document.getElementById('sync-btn');
         if(btn) btn.innerText = "Syncing...";
@@ -288,9 +306,12 @@ const app = {
         try {
             const res = await fetch(`${CONFIG.DATA_URL}?t=${Date.now()}`);
             if (!res.ok) throw new Error("HTTP " + res.status);
-            const json = await res.json();
+            let json = await res.json();
             
             if (!json.heroes || !json.items) throw new Error("Invalid Schema");
+
+            // CLEAN DATA BEFORE SAVING
+            json = app.processData(json);
 
             localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify(json));
             localStorage.setItem(CONFIG.META_KEY, JSON.stringify(json.meta));
@@ -306,7 +327,6 @@ const app = {
     },
 
     loadDemoData: () => {
-        // Updated Demo Data with NoD removed logic
         const demo = {
             meta: { patch: "Demo Mode", generated_at: "Now" },
             heroes: [
@@ -315,12 +335,11 @@ const app = {
             ],
             items: [
                 { id: "i_boots", name: "Tough Boots", category: "movement", counter_tags: ["hard_cc"], synergy_tags: ["need_move_speed"] },
-                { id: "i_glaive", name: "Divine Glaive", category: "magic", counter_tags: ["high_hp"], synergy_tags: ["need_pen", "need_burst"] },
-                { id: "i_glow", name: "Glowing Wand", category: "magic", counter_tags: ["high_healing"], synergy_tags: ["need_anti_heal"] }
+                { id: "i_glaive", name: "Divine Glaive", category: "magic", counter_tags: ["high_hp"], synergy_tags: ["need_pen", "need_burst"] }
             ]
         };
         state.data = demo;
-        app.renderMeta(demo.meta, 2, 3);
+        app.renderMeta(demo.meta, 2, 2);
         app.showMain();
     },
 
@@ -403,21 +422,18 @@ const app = {
         const isSupport = myHero.roles.includes("Support");
         const isFrontline = isTank || isFighter;
 
-        // Valid Survival Items allowed on Squishies
         const validSurvival = ["i_winter_crown", "i_immortality", "i_rose_gold", "i_athena_shield", "i_wind_nature", "i_queens_wings", "i_bruteforce", "i_antique_cuirass"];
 
         const scoreItem = (item) => {
             let score = 0;
             let reasons = [];
 
-            // 0. Hard Filters (Safety)
+            // 0. Hard Filters
             if (isMagic && item.category === "attack") return { score: -99 };
             if (isPhys && item.category === "magic") return { score: -99 };
             
-            // DOMINANCE ICE FIX: Only for Frontliners/Supports. Mages/MMs should use Glowing/Sea Halberd.
             if (item.id === "i_dominance_ice" && !isFrontline && !isSupport) return { score: -99 };
 
-            // GENERAL TANK ITEM FIX: Squishies shouldn't buy random tank items unless it's a Survival Item
             if (item.category === "defense" && !isFrontline && !isSupport && !validSurvival.includes(item.id) && item.category !== "movement") {
                 return { score: -99 };
             }
@@ -438,7 +454,7 @@ const app = {
                     if (matches.length > 0) {
                         let weight = CONFIG.W_SOFT_COUNTER;
                         
-                        // Critical Counters Boost
+                        // Boost for Hard Counters
                         if (matches.includes("high_healing") && item.counter_tags.includes("high_healing")) weight = CONFIG.W_HARD_COUNTER;
                         if (matches.includes("burst_magic") && item.name.includes("Athena")) weight = CONFIG.W_HARD_COUNTER;
                         if (matches.includes("hard_cc") && item.name.includes("Tough")) weight = CONFIG.W_HARD_COUNTER;
@@ -507,3 +523,5 @@ document.addEventListener('DOMContentLoaded', app.init);
 </script>
 </body>
 </html>
+
+
