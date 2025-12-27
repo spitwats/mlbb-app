@@ -246,14 +246,14 @@
 const CONFIG = {
     // Configured for user: spitwats, repo: mlbb-app
     DATA_URL: "https://spitwats.github.io/mlbb-app/mlbb-data.json", 
-    CACHE_KEY: "mlbb_data_cache_v4",
-    META_KEY: "mlbb_data_meta_cache_v4",
+    CACHE_KEY: "mlbb_data_cache_v5",
+    META_KEY: "mlbb_data_meta_cache_v5",
     
-    // ADVANCED WEIGHTS
-    W_HARD_COUNTER: 4.5,  // Critical Counter (e.g. Anti-Heal)
-    W_CORE_SYNERGY: 3.0,  // Necessary for hero function (e.g. Mana)
-    W_SOFT_COUNTER: 2.0,  // Good to have (e.g. Armor)
-    W_TEAM_UTILITY: 1.0   // Team buffs
+    // SCORING WEIGHTS
+    W_HARD_COUNTER: 4.5,
+    W_CORE_SYNERGY: 3.5,
+    W_SOFT_COUNTER: 2.0,
+    W_TEAM_UTILITY: 1.0
 };
 
 const state = {
@@ -306,7 +306,6 @@ const app = {
     },
 
     loadDemoData: () => {
-        // Updated Demo Data without NoD and with updated logic
         const demo = {
             meta: { patch: "Demo Mode", generated_at: "Now" },
             heroes: [
@@ -402,53 +401,59 @@ const app = {
         const isFighter = myHero.roles.includes("Fighter");
         const isSupport = myHero.roles.includes("Support");
         const isFrontline = isTank || isFighter;
+        
+        // SQUISHY GUARD: Pure Mages, MMs, Assassins (who aren't Tanks/Fighters)
+        const isSquishy = !isTank && !isFighter && !isSupport;
 
-        // Valid Survival Items allowed on Squishies
-        const validSurvival = ["i_winter_crown", "i_immortality", "i_rose_gold", "i_athena_shield", "i_wind_nature", "i_queens_wings", "i_bruteforce", "i_antique_cuirass"];
+        // Valid Survival Items Allowed for Squishies
+        const allowedSurvival = [
+            "i_winter_crown", 
+            "i_immortality", 
+            "i_rose_gold", 
+            "i_wind_nature", 
+            "i_athena_shield" // Only allowed via hard counter logic below
+        ];
 
         const scoreItem = (item) => {
             let score = 0;
             let reasons = [];
 
-            // 0. Hard Filters (Safety)
+            // --- 0. HARD FILTERS (Safety Net) ---
             
-            // Magic Hero cannot buy Phys Attack Items (Except Wind of Nature for some hybrids, but simplified here)
-            if (isMagic && item.category === "attack") return { score: -99 };
-            // Phys Hero cannot buy Magic Items
+            // Damage Type Mismatch
+            if (isMagic && item.category === "attack" && item.id !== "i_wind_nature" && item.id !== "i_winter_crown") return { score: -99 };
             if (isPhys && item.category === "magic") return { score: -99 };
             
-            // DOMINANCE ICE FIX: Only for Frontliners/Supports. Mages/MMs should use Glowing/Sea Halberd.
-            if (item.id === "i_dominance_ice" && !isFrontline && !isSupport) return { score: -99 };
+            // Role Mismatch: Dominance Ice
+            // Block Dom Ice on Squishies completely. They should use Glowing Wand or Sea Halberd.
+            if (item.id === "i_dominance_ice" && isSquishy) return { score: -99 };
 
-            // GENERAL TANK ITEM FIX: Squishies shouldn't buy random tank items unless it's a Survival Item
-            if (item.category === "defense" && !isFrontline && !isSupport && !validSurvival.includes(item.id) && item.category !== "movement") {
+            // Role Mismatch: Heavy Defense Items on Squishies
+            // Block things like Cuirass, Blade Armor, Guardian Helmet for pure damage dealers.
+            if (item.category === "defense" && isSquishy && !allowedSurvival.includes(item.id)) {
                 return { score: -99 };
             }
 
-            // 1. Core Synergy
+            // --- 1. CORE SYNERGY ---
             if (item.synergy_tags && myHero.style_tags) {
                 const matches = item.synergy_tags.filter(t => myHero.style_tags.includes(t));
                 if (matches.length > 0) {
                     score += (CONFIG.W_CORE_SYNERGY * matches.length);
-                    reasons.push(`Synergy: ${matches[0].replace(/need_/g, '').replace(/_/g, ' ')}`);
+                    reasons.push(`Core: Matches need for ${matches[0].replace(/need_/g, '').replace(/_/g, ' ')}`);
                 }
             }
 
-            // 2. Counter Logic
+            // --- 2. COUNTER LOGIC ---
             if (item.counter_tags) {
                 enemies.forEach(e => {
                     const matches = item.counter_tags.filter(t => e.threat_tags.includes(t));
                     if (matches.length > 0) {
                         let weight = CONFIG.W_SOFT_COUNTER;
                         
-                        // Boost for Hard Counters
-                        // Anti-heal vs Healing
+                        // Hard Counters (Boost Score)
                         if (matches.includes("high_healing") && item.counter_tags.includes("high_healing")) weight = CONFIG.W_HARD_COUNTER;
-                        // Athena vs Burst Magic
                         if (matches.includes("burst_magic") && item.name.includes("Athena")) weight = CONFIG.W_HARD_COUNTER;
-                        // Tough Boots vs CC
                         if (matches.includes("hard_cc") && item.name.includes("Tough")) weight = CONFIG.W_HARD_COUNTER;
-                        // Wind of Nature vs Phys Burst (Only for MM usually)
                         if (matches.includes("burst_phys") && item.name.includes("Wind")) weight = CONFIG.W_HARD_COUNTER;
                         
                         score += weight;
@@ -468,13 +473,11 @@ const app = {
         const rankedItems = itemPool.map(scoreItem).filter(x => x.score > 0).sort((a,b) => b.score - a.score);
 
         const results = [];
-        // 1. Best Boots
         if (rankedBoots[0]) {
             rankedBoots[0].isBoot = true;
-            if(rankedBoots[0].reasons.length === 0) rankedBoots[0].reasons.push("Best available option.");
+            if(rankedBoots[0].reasons.length === 0) rankedBoots[0].reasons.push("Best movement option.");
             results.push(rankedBoots[0]);
         }
-        // 2. Top 3 Items
         results.push(...rankedItems.slice(0, 3));
 
         app.renderResults(results);
@@ -516,3 +519,5 @@ document.addEventListener('DOMContentLoaded', app.init);
 </script>
 </body>
 </html>
+
+
