@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MLBB Item Recommender</title>
+    <title>MLBB Meta Recommender</title>
     <style>
         :root {
             --bg-dark: #0f172a;
@@ -25,15 +25,486 @@
         body {
             background-color: var(--bg-dark);
             color: var(--text-main);
-            padding-bottom: 90px; /* Space for fixed bottom buttons */
+            padding-bottom: 90px;
         }
 
-        /* Header */
         header {
             background: var(--bg-card);
             padding: 1rem;
             border-bottom: 1px solid var(--border);
             display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        h1 { font-size: 1.1rem; font-weight: 700; color: var(--gold); }
+        .meta-info { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;}
+
+        .btn-refresh {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 0.4rem 0.8rem;
+            border-radius: var(--radius);
+            font-size: 0.8rem;
+            cursor: pointer;
+            min-width: 80px;
+        }
+
+        .container { max-width: 600px; margin: 0 auto; padding: 1rem; }
+        
+        .panel {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border);
+        }
+
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; }
+        .panel-title { font-weight: 600; font-size: 0.95rem; }
+        .panel-count { font-size: 0.8rem; color: var(--text-muted); }
+
+        .chip-container { display: flex; flex-wrap: wrap; gap: 0.5rem; min-height: 40px; }
+
+        .chip {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            padding: 0.3rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .chip-remove { color: var(--danger); cursor: pointer; font-weight: bold; padding: 0 4px; }
+
+        .add-btn {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--accent);
+            border: 1px dashed var(--accent);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        .action-area {
+            position: fixed;
+            bottom: 0; left: 0; width: 100%;
+            background: var(--bg-card);
+            padding: 1rem;
+            border-top: 1px solid var(--border);
+            display: flex; justify-content: center;
+            z-index: 40;
+            box-shadow: 0 -4px 10px rgba(0,0,0,0.3);
+        }
+
+        .btn-main {
+            background: var(--gold);
+            color: #000;
+            border: none;
+            padding: 0.8rem 2rem;
+            border-radius: 30px;
+            font-weight: 700;
+            width: 100%;
+            max-width: 400px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn-main:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; }
+
+        /* Modal */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-dark);
+            z-index: 100;
+            display: none; flex-direction: column;
+        }
+        .modal.active { display: flex; }
+
+        .modal-header { padding: 1rem; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem; }
+        .search-input {
+            flex: 1;
+            background: var(--bg-card); border: 1px solid var(--border);
+            padding: 0.6rem; border-radius: var(--radius);
+            color: var(--text-main); font-size: 1rem;
+        }
+        .btn-close { background: transparent; border: none; color: var(--text-main); font-size: 1.5rem; cursor: pointer; }
+        .modal-list { flex: 1; overflow-y: auto; padding: 1rem; }
+        
+        .list-item {
+            padding: 0.8rem; border-bottom: 1px solid var(--border); cursor: pointer;
+            display: flex; justify-content: space-between;
+        }
+        .list-item-role { font-size: 0.8rem; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px;}
+
+        /* Results */
+        .results-container { margin-top: 2rem; display: none; padding-bottom: 20px; animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .results-container.active { display: block; }
+
+        .result-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .rank-badge {
+            position: absolute; top: 0; right: 0;
+            background: var(--gold); color: #000;
+            padding: 0.2rem 0.8rem; font-size: 0.75rem; font-weight: 800;
+            border-bottom-left-radius: 12px;
+        }
+        .rank-badge.boots { background: var(--accent); color: white; }
+
+        .item-name { font-size: 1.2rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.3rem; }
+        .item-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.8rem; }
+        .tag { font-size: 0.7rem; padding: 0.1rem 0.5rem; border-radius: 4px; background: rgba(59, 130, 246, 0.2); color: #93c5fd; }
+        .tag.counter { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+        
+        .reason-list { margin-left: 1.2rem; margin-bottom: 0.5rem; }
+        .reason-list li { margin-bottom: 0.4rem; font-size: 0.9rem; color: var(--text-muted); line-height: 1.4; }
+        .highlight { color: var(--gold); font-weight: 500; }
+
+        /* Error Screen */
+        .error-screen { display: none; text-align: center; padding: 4rem 1rem; color: var(--text-muted); }
+        .error-screen.active { display: block; }
+        .btn-demo { margin-top: 1.5rem; background: var(--accent); color: white; border: none; padding: 0.8rem 1.5rem; border-radius: var(--radius); font-weight: 600; cursor: pointer; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div>
+        <h1>MLBB Meta Lab</h1>
+        <div class="meta-info" id="data-version">Connecting...</div>
+    </div>
+    <button id="sync-btn" class="btn-refresh" onclick="app.refreshData()">↻ Sync</button>
+</header>
+
+<div id="error-view" class="error-screen">
+    <h2>Data Unavailable</h2>
+    <p>Please sync with GitHub to load the latest Season 35+ Meta.</p>
+    <button class="btn-demo" onclick="app.loadDemoData()">Load Demo Data</button>
+</div>
+
+<div id="main-view" class="container" style="display:none;">
+    
+    <!-- My Hero -->
+    <div class="panel">
+        <div class="panel-header">
+            <span class="panel-title">My Hero</span>
+        </div>
+        <div class="chip-container" id="hero-chips">
+            <button class="add-btn" onclick="app.openPicker('hero')">+ Select Hero</button>
+        </div>
+    </div>
+
+    <!-- Enemies -->
+    <div class="panel">
+        <div class="panel-header">
+            <span class="panel-title">Enemies (Min 1)</span>
+            <span class="panel-count" id="enemy-count">0/5</span>
+        </div>
+        <div class="chip-container" id="enemy-chips">
+            <button class="add-btn" onclick="app.openPicker('enemy')">+ Add Enemy</button>
+        </div>
+    </div>
+
+    <!-- Results -->
+    <div id="results-area" class="results-container"></div>
+</div>
+
+<div class="action-area">
+    <button id="btn-recommend" class="btn-main" onclick="app.calculate()" disabled>Analyze & Recommend</button>
+</div>
+
+<!-- Picker Modal -->
+<div id="picker-modal" class="modal">
+    <div class="modal-header">
+        <input type="text" id="search-box" class="search-input" placeholder="Search hero..." onkeyup="app.filterList()">
+        <button class="btn-close" onclick="app.closePicker()">✕</button>
+    </div>
+    <div id="picker-list" class="modal-list"></div>
+</div>
+
+<script>
+const CONFIG = {
+    // Configured for user: spitwats, repo: mlbb-app
+    DATA_URL: "https://spitwats.github.io/mlbb-app/mlbb-data.json", 
+    CACHE_KEY: "mlbb_data_cache_v2",
+    META_KEY: "mlbb_data_meta_cache_v2",
+    
+    // ADVANCED WEIGHTS
+    W_HARD_COUNTER: 4.0,  // Direct counter (e.g., Anti-Heal vs Estes)
+    W_CORE_SYNERGY: 3.5,  // Critical for hero (e.g., Mana for Cecilion)
+    W_SOFT_COUNTER: 2.0,  // Helpful (e.g., Armor vs Phys)
+    W_TEAM_UTILITY: 1.0   // Team buffs
+};
+
+const state = {
+    data: null,
+    selection: { hero: null, enemies: [] },
+    pickerMode: null
+};
+
+const app = {
+    init: async () => {
+        const cached = localStorage.getItem(CONFIG.CACHE_KEY);
+        const meta = localStorage.getItem(CONFIG.META_KEY);
+        if (cached && meta) {
+            try {
+                const json = JSON.parse(cached);
+                state.data = json;
+                app.renderMeta(JSON.parse(meta), json.heroes.length, json.items.length);
+                app.showMain();
+                app.fetchData(true); 
+            } catch (e) { app.fetchData(); }
+        } else {
+            app.fetchData();
+        }
+    },
+
+    fetchData: async (silent = false) => {
+        const btn = document.getElementById('sync-btn');
+        if(btn) btn.innerText = "Syncing...";
+        
+        try {
+            const res = await fetch(`${CONFIG.DATA_URL}?t=${Date.now()}`);
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            const json = await res.json();
+            
+            if (!json.heroes || !json.items) throw new Error("Invalid Schema");
+
+            localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify(json));
+            localStorage.setItem(CONFIG.META_KEY, JSON.stringify(json.meta));
+            state.data = json;
+            app.renderMeta(json.meta, json.heroes.length, json.items.length);
+            app.showMain();
+            if(btn) btn.innerText = "✓ Synced";
+        } catch (err) {
+            console.warn(err);
+            if(btn) btn.innerText = "⚠ Retry";
+            if (!state.data && !silent) app.showError();
+        }
+    },
+
+    loadDemoData: () => {
+        // Fallback demo data if fetch fails
+        const demo = {
+            meta: { patch: "Demo Mode", generated_at: "Now" },
+            heroes: [
+                 { id: "h_sora", name: "Sora", roles: ["Mage"], damage_type: "magic", style_tags: ["need_burst", "need_cdr"], threat_tags: ["burst_magic"] },
+                 { id: "h_tig", name: "Tigreal", roles: ["Tank"], damage_type: "physical", style_tags: ["need_tankiness"], threat_tags: ["hard_cc", "high_hp"] }
+            ],
+            items: [
+                { id: "i_boots", name: "Tough Boots", category: "movement", counter_tags: ["hard_cc"], synergy_tags: ["need_move_speed"] },
+                { id: "i_glaive", name: "Divine Glaive", category: "magic", counter_tags: ["high_hp"], synergy_tags: ["need_pen", "need_burst"] }
+            ]
+        };
+        state.data = demo;
+        app.renderMeta(demo.meta, 2, 2);
+        app.showMain();
+    },
+
+    // UI Logic
+    renderMeta: (meta, h, i) => {
+        document.getElementById('data-version').innerText = `Patch ${meta.patch} (${h}H/${i}I)`;
+    },
+    showMain: () => {
+        document.getElementById('error-view').style.display = 'none';
+        document.getElementById('main-view').style.display = 'block';
+        app.updateUI();
+    },
+    showError: () => {
+        document.getElementById('main-view').style.display = 'none';
+        document.getElementById('error-view').classList.add('active');
+    },
+    
+    // Picker & Selection Logic (Same as before but simplified)
+    updateUI: () => {
+        const { hero, enemies } = state.selection;
+        const hMap = new Map(state.data.heroes.map(h => [h.id, h]));
+
+        const hDiv = document.getElementById('hero-chips');
+        hDiv.innerHTML = hero ? 
+            `<div class="chip" style="border-color:var(--accent)">${hMap.get(hero).name} <span class="chip-remove" onclick="app.remove('hero')">×</span></div>` : 
+            `<button class="add-btn" onclick="app.openPicker('hero')">+ Select Hero</button>`;
+
+        const eDiv = document.getElementById('enemy-chips');
+        eDiv.innerHTML = enemies.map(id => `<div class="chip" style="border-color:var(--danger)">${hMap.get(id).name} <span class="chip-remove" onclick="app.remove('enemy','${id}')">×</span></div>`).join('');
+        if(enemies.length < 5) eDiv.innerHTML += `<button class="add-btn" onclick="app.openPicker('enemy')">+ Add Enemy</button>`;
+
+        const btn = document.getElementById('btn-recommend');
+        btn.disabled = !(hero && enemies.length > 0);
+        document.getElementById('results-area').style.display = 'none';
+    },
+
+    openPicker: (mode) => {
+        state.pickerMode = mode;
+        document.getElementById('picker-modal').classList.add('active');
+        document.getElementById('search-box').value = '';
+        document.getElementById('search-box').focus();
+        app.filterList();
+    },
+    closePicker: () => document.getElementById('picker-modal').classList.remove('active'),
+    
+    filterList: () => {
+        const q = document.getElementById('search-box').value.toLowerCase();
+        const list = document.getElementById('picker-list');
+        const used = new Set([state.selection.hero, ...state.selection.enemies]);
+        
+        const items = state.data.heroes
+            .filter(h => !used.has(h.id) && h.name.toLowerCase().includes(q))
+            .sort((a,b) => a.name.localeCompare(b.name));
+            
+        list.innerHTML = items.map(h => `
+            <div class="list-item" onclick="app.select('${h.id}')">
+                <span style="font-weight:600">${h.name}</span>
+                <span class="list-item-role">${h.roles.join('/')}</span>
+            </div>`).join('');
+    },
+
+    select: (id) => {
+        if(state.pickerMode === 'hero') state.selection.hero = id;
+        else state.selection.enemies.push(id);
+        app.closePicker();
+        app.updateUI();
+    },
+    remove: (mode, id) => {
+        if(mode === 'hero') state.selection.hero = null;
+        else state.selection.enemies = state.selection.enemies.filter(x => x !== id);
+        app.updateUI();
+    },
+
+    // --- The Brain: Deep Research Logic ---
+    calculate: () => {
+        const myHero = state.data.heroes.find(h => h.id === state.selection.hero);
+        const enemies = state.selection.enemies.map(id => state.data.heroes.find(h => h.id === id));
+        
+        // Context Awareness
+        const isMagic = myHero.damage_type === "magic";
+        const isPhys = myHero.damage_type === "physical";
+        const isTank = myHero.roles.includes("Tank") || myHero.roles.includes("Support");
+
+        const scoreItem = (item) => {
+            let score = 0;
+            let reasons = [];
+
+            // 0. Hard Filters
+            if (isMagic && item.category === "attack") return { score: -99 };
+            if (isPhys && item.category === "magic") return { score: -99 };
+            // Anti-Healing Logic: Don't suggest Sea Halberd (Phys) to Mages
+            if (isMagic && item.id === "i_sea_halberd") return { score: -99 };
+            if (isPhys && item.id === "i_necklace_durance") return { score: -99 };
+
+            // 1. Core Synergy (Does this item fit my hero?)
+            if (item.synergy_tags && myHero.style_tags) {
+                const matches = item.synergy_tags.filter(t => myHero.style_tags.includes(t));
+                if (matches.length > 0) {
+                    score += (CONFIG.W_CORE_SYNERGY * matches.length);
+                    reasons.push(`Core: Matches your need for ${matches[0].replace(/need_/g, '').replace(/_/g, ' ')}`);
+                }
+            }
+
+            // 2. Counter Logic (Does this item beat the enemies?)
+            if (item.counter_tags) {
+                enemies.forEach(e => {
+                    const matches = item.counter_tags.filter(t => e.threat_tags.includes(t));
+                    if (matches.length > 0) {
+                        // Weight based on threat level
+                        let weight = CONFIG.W_SOFT_COUNTER;
+                        if (matches.includes("high_healing") && item.counter_tags.includes("high_healing")) weight = CONFIG.W_HARD_COUNTER;
+                        if (matches.includes("burst_magic") && item.name.includes("Athena")) weight = CONFIG.W_HARD_COUNTER;
+                        
+                        score += weight;
+                        const threatName = matches[0].replace(/_/g, ' ');
+                        reasons.push(`Counters <span class="highlight">${e.name}</span> (${threatName})`);
+                    }
+                });
+            }
+
+            // 3. Role Adjustments
+            if (item.category === "defense" && !isTank && item.category !== "movement") {
+                // Penalize full defense items on carries unless they are critical counters
+                if (score < 4) score -= 2; 
+            }
+
+            return { item, score, reasons: [...new Set(reasons)] };
+        };
+
+        // Split Pools
+        const bootsPool = state.data.items.filter(i => i.category === 'movement');
+        const itemPool = state.data.items.filter(i => i.category !== 'movement');
+
+        // Rank
+        const rankedBoots = bootsPool.map(scoreItem).sort((a,b) => b.score - a.score);
+        const rankedItems = itemPool.map(scoreItem).filter(x => x.score > 0).sort((a,b) => b.score - a.score);
+
+        const results = [];
+        
+        // Add Best Boot
+        if (rankedBoots[0]) {
+            rankedBoots[0].isBoot = true;
+            if(rankedBoots[0].reasons.length === 0) rankedBoots[0].reasons.push("Best movement option.");
+            results.push(rankedBoots[0]);
+        }
+
+        // Add Top 3 Items
+        results.push(...rankedItems.slice(0, 3));
+
+        app.renderResults(results);
+    },
+
+    renderResults: (list) => {
+        const div = document.getElementById('results-area');
+        div.innerHTML = "";
+        
+        if (list.length === 0) {
+            div.innerHTML = "<p style='text-align:center;color:var(--text-muted)'>No strong recommendations found.</p>";
+            div.style.display = 'block';
+            return;
+        }
+
+        list.forEach((r, idx) => {
+            let label = r.isBoot ? "RECOMMENDED BOOTS" : `CORE ITEM #${idx}`;
+            let cls = r.isBoot ? "rank-badge boots" : "rank-badge";
+            
+            div.innerHTML += `
+            <div class="result-card">
+                <div class="${cls}">${label}</div>
+                <div class="item-name">${r.item.name}</div>
+                <div class="item-tags">
+                    ${(r.item.synergy_tags||[]).slice(0,2).map(t => `<span class="tag">${t.replace('need_', '')}</span>`).join('')}
+                    ${(r.item.counter_tags||[]).slice(0,1).map(t => `<span class="tag counter">vs ${t}</span>`).join('')}
+                </div>
+                <ul class="reason-list">
+                    ${r.reasons.slice(0,3).map(x => `<li>${x}</li>`).join('')}
+                </ul>
+            </div>`;
+        });
+        div.style.display = 'block';
+        div.scrollIntoView({ behavior: 'smooth' });
+    }
+};
+
+document.addEventListener('DOMContentLoaded', app.init);
+</script>
+</body>
+</html>
+
+
             justify-content: space-between;
             align-items: center;
             position: sticky;
@@ -891,3 +1362,4 @@ document.addEventListener('DOMContentLoaded', app.init);
 </script>
 </body>
 </html>
+
