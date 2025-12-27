@@ -2,8 +2,8 @@
   "meta": {
     "game": "Mobile Legends: Bang Bang",
     "patch": "1.9.52 / Season 36+",
-    "generated_at": "2025-12-27T08:30:00Z",
-    "source_notes": "Complete 128 Hero Roster. Duplicates removed. NoD removed. Advanced counter-tags."
+    "generated_at": "2025-12-27T08:35:00Z",
+    "source_notes": "Cleaned Roster (Strictly Unique IDs)."
   },
   "tags": {
     "threat_definitions": [
