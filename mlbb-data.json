@@ -1,9 +1,9 @@
 {
   "meta": {
     "game": "Mobile Legends: Bang Bang",
-    "patch": "1.9.50 / Season 36 (Projected)",
-    "generated_at": "2025-12-26T20:00:00Z",
-    "source_notes": "Complete 128-Hero Roster. Includes Sora, Lukas, Suyou, Zhuxin."
+    "patch": "1.9.50 / Season 36",
+    "generated_at": "2025-12-26T22:30:00Z",
+    "source_notes": "Complete Item Database. NoD removed. War Axe/Queens Wings updated. All missing core items added."
   },
   "tags": {
     "threat_definitions": [
@@ -16,7 +16,7 @@
       "need_mana", "need_energy", "need_cdr", "need_burst", "need_dps",
       "need_atk_speed", "need_crit", "need_lifesteal", "need_spellvamp",
       "need_move_speed", "need_tankiness", "need_pen", "need_anti_heal",
-      "need_hybrid_damage", "need_transform"
+      "need_hybrid_damage", "need_transform", "need_on_hit", "need_spam"
     ]
   },
   "heroes": [
@@ -152,7 +152,7 @@
   "items": [
     { "id": "i_sea_halberd", "name": "Sea Halberd", "category": "attack", "timing": "early", "passive_summary": "Anti-Heal + Damage vs High HP.", "counter_tags": ["high_healing", "high_shield", "high_hp", "sustain_fighters"], "synergy_tags": ["need_atk_speed", "need_pen"] },
     { "id": "i_dominance_ice", "name": "Dominance Ice", "category": "defense", "timing": "early", "passive_summary": "Aura: Reduces Enemy Atk Speed & Healing.", "counter_tags": ["high_healing", "high_shield", "need_atk_speed", "dps_phys"], "synergy_tags": ["need_tankiness", "need_mana", "need_cdr"] },
-    { "id": "i_necklace_durance", "name": "Necklace of Durance", "category": "magic", "timing": "mid", "passive_summary": "Anti-Heal on Magic Hit.", "counter_tags": ["high_healing", "high_shield"], "synergy_tags": ["need_cdr", "need_lifesteal", "need_mana"] },
+    { "id": "i_glowing_wand", "name": "Glowing Wand", "category": "magic", "timing": "mid", "passive_summary": "Anti-Heal & HP Burn.", "counter_tags": ["high_healing", "high_hp", "high_shield", "sustain_fighters"], "synergy_tags": ["need_dps_magic", "need_poke", "need_anti_heal"] },
     { "id": "i_malefic_roar", "name": "Malefic Roar", "category": "attack", "timing": "late", "passive_summary": "Massive Physical Penetration.", "counter_tags": ["high_armor", "high_hp"], "synergy_tags": ["need_pen", "need_burst"] },
     { "id": "i_divine_glaive", "name": "Divine Glaive", "category": "magic", "timing": "late", "passive_summary": "Massive Magic Penetration.", "counter_tags": ["high_magic_res", "high_hp"], "synergy_tags": ["need_pen", "need_burst"] },
     { "id": "i_athena_shield", "name": "Athena's Shield", "category": "defense", "timing": "mid", "passive_summary": "Shield vs Magic Burst.", "counter_tags": ["burst_magic", "dps_magic"], "synergy_tags": ["need_tankiness", "need_shield"] },
@@ -174,7 +174,6 @@
     { "id": "i_holy_crystal", "name": "Holy Crystal", "category": "magic", "timing": "late", "passive_summary": "Massive Magic Power scaling.", "counter_tags": [], "synergy_tags": ["need_burst", "need_magic_power"] },
     { "id": "i_blood_wings", "name": "Blood Wings", "category": "magic", "timing": "late", "passive_summary": "Huge Shield & Magic Power.", "counter_tags": ["burst_damage"], "synergy_tags": ["need_shield", "need_magic_power"] },
     { "id": "i_genius_wand", "name": "Genius Wand", "category": "magic", "timing": "early", "passive_summary": "Reduces Magic Defense.", "counter_tags": ["tank_heavy"], "synergy_tags": ["need_pen", "need_dps_magic"] },
-    { "id": "i_glowing_wand", "name": "Glowing Wand", "category": "magic", "timing": "mid", "passive_summary": "HP Burn Damage + Anti-Heal.", "counter_tags": ["high_hp", "high_healing"], "synergy_tags": ["need_dps_magic", "need_poke"] },
     { "id": "i_ice_queen_wand", "name": "Ice Queen Wand", "category": "magic", "timing": "mid", "passive_summary": "Slows enemies on hit.", "counter_tags": ["high_mobility"], "synergy_tags": ["need_slow", "need_spellvamp"] },
     { "id": "i_fleeting_time", "name": "Fleeting Time", "category": "magic", "timing": "mid", "passive_summary": "Ult CDR on kill/assist.", "counter_tags": [], "synergy_tags": ["need_cdr", "need_burst"] },
     { "id": "i_concentrated_energy", "name": "Concentrated Energy", "category": "magic", "timing": "mid", "passive_summary": "Magic Lifesteal stacking.", "counter_tags": ["dps_phys"], "synergy_tags": ["need_lifesteal", "need_sustain"] },
@@ -197,8 +196,12 @@
     { "id": "i_arcane_boots", "name": "Arcane Boots", "category": "movement", "timing": "early", "passive_summary": "Magic Penetration.", "counter_tags": ["high_magic_res"], "synergy_tags": ["need_burst", "need_pen"] },
     { "id": "i_swift_boots", "name": "Swift Boots", "category": "movement", "timing": "early", "passive_summary": "Attack Speed.", "counter_tags": [], "synergy_tags": ["need_atk_speed", "need_dps"] },
     { "id": "i_demon_shoes", "name": "Demon Shoes", "category": "movement", "timing": "early", "passive_summary": "Mana Regen.", "counter_tags": [], "synergy_tags": ["need_mana", "need_spam"] },
-    { "id": "i_rapid_boots", "name": "Rapid Boots", "category": "movement", "timing": "early", "passive_summary": "High Out-of-Combat Speed + Slow Resist.", "counter_tags": ["slow_heavy"], "synergy_tags": ["need_roam", "need_move_speed"] }
+    { "id": "i_rapid_boots", "name": "Rapid Boots", "category": "movement", "timing": "early", "passive_summary": "High Out-of-Combat Speed + Slow Resist.", "counter_tags": ["slow_heavy"], "synergy_tags": ["need_roam", "need_move_speed"] },
+    { "id": "i_blade_of_heptaseas", "name": "Blade of the Heptaseas", "category": "attack", "timing": "early", "passive_summary": "Ambush Burst Damage.", "counter_tags": ["low_armor"], "synergy_tags": ["need_burst", "need_pen", "need_hp"] },
+    { "id": "i_windtalker", "name": "Windtalker", "category": "attack", "timing": "early", "passive_summary": "Speed & Splash Damage.", "counter_tags": ["high_mobility"], "synergy_tags": ["need_atk_speed", "need_move_speed", "need_crit"] },
+    { "id": "i_enchanted_talisman", "name": "Enchanted Talisman", "category": "magic", "timing": "early", "passive_summary": "Mana Regen & CDR.", "counter_tags": [], "synergy_tags": ["need_mana", "need_cdr", "need_spam"] },
+    { "id": "i_clock_destiny", "name": "Clock of Destiny", "category": "magic", "timing": "early", "passive_summary": "Scales HP & Magic over time.", "counter_tags": ["burst_phys"], "synergy_tags": ["need_mana", "need_hp", "need_burst"] },
+    { "id": "i_lightning_truncheon", "name": "Lightning Truncheon", "category": "magic", "timing": "mid", "passive_summary": "Burst Damage Scales with Mana.", "counter_tags": ["low_magic_res"], "synergy_tags": ["need_burst", "need_mana", "need_cdr"] },
+    { "id": "i_feather_heaven", "name": "Feather of Heaven", "category": "magic", "timing": "mid", "passive_summary": "Magic Damage on Basic Attack.", "counter_tags": [], "synergy_tags": ["need_atk_speed", "need_on_hit", "need_magic_power"] }
   ]
 }
-
-
