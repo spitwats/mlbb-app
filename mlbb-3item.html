@@ -196,7 +196,7 @@
 
 <div id="error-view" class="error-screen">
     <h2>Data Unavailable</h2>
-    <p>Please sync with GitHub to load the latest 130+ Hero Roster.</p>
+    <p>Please sync with GitHub to load the latest 128+ Hero Roster.</p>
     <button class="btn-test-link" onclick="app.testLink()">Test Link</button>
     <br>
     <button class="btn-demo" onclick="app.loadDemoData()">Load Demo Data</button>
@@ -246,13 +246,13 @@
 const CONFIG = {
     // Configured for user: spitwats, repo: mlbb-app
     DATA_URL: "https://spitwats.github.io/mlbb-app/mlbb-data.json", 
-    CACHE_KEY: "mlbb_data_cache_v3",
-    META_KEY: "mlbb_data_meta_cache_v3",
+    CACHE_KEY: "mlbb_data_cache_v4",
+    META_KEY: "mlbb_data_meta_cache_v4",
     
     // ADVANCED WEIGHTS
-    W_HARD_COUNTER: 4.0,  // Direct counter (e.g., Anti-Heal vs Estes)
-    W_CORE_SYNERGY: 3.5,  // Critical for hero (e.g., Mana for Cecilion)
-    W_SOFT_COUNTER: 2.0,  // Helpful (e.g., Armor vs Phys)
+    W_HARD_COUNTER: 4.5,  // Critical Counter (e.g. Anti-Heal)
+    W_CORE_SYNERGY: 3.0,  // Necessary for hero function (e.g. Mana)
+    W_SOFT_COUNTER: 2.0,  // Good to have (e.g. Armor)
     W_TEAM_UTILITY: 1.0   // Team buffs
 };
 
@@ -306,7 +306,7 @@ const app = {
     },
 
     loadDemoData: () => {
-        // Fallback demo data with new tags
+        // Updated Demo Data without NoD and with updated logic
         const demo = {
             meta: { patch: "Demo Mode", generated_at: "Now" },
             heroes: [
@@ -315,11 +315,12 @@ const app = {
             ],
             items: [
                 { id: "i_boots", name: "Tough Boots", category: "movement", counter_tags: ["hard_cc"], synergy_tags: ["need_move_speed"] },
-                { id: "i_glaive", name: "Divine Glaive", category: "magic", counter_tags: ["high_hp"], synergy_tags: ["need_pen", "need_burst"] }
+                { id: "i_glaive", name: "Divine Glaive", category: "magic", counter_tags: ["high_hp"], synergy_tags: ["need_pen", "need_burst"] },
+                { id: "i_glow", name: "Glowing Wand", category: "magic", counter_tags: ["high_healing"], synergy_tags: ["need_anti_heal"] }
             ]
         };
         state.data = demo;
-        app.renderMeta(demo.meta, 2, 2);
+        app.renderMeta(demo.meta, 2, 3);
         app.showMain();
     },
 
@@ -402,34 +403,34 @@ const app = {
         const isSupport = myHero.roles.includes("Support");
         const isFrontline = isTank || isFighter;
 
+        // Valid Survival Items allowed on Squishies
+        const validSurvival = ["i_winter_crown", "i_immortality", "i_rose_gold", "i_athena_shield", "i_wind_nature", "i_queens_wings", "i_bruteforce", "i_antique_cuirass"];
+
         const scoreItem = (item) => {
             let score = 0;
             let reasons = [];
 
-            // 0. Hard Filters (The Safety Net)
-            // - Mages/MMs/Assassins should NOT buy tank items unless they are survival items
-            const isSurvivalItem = ["i_winter_crown", "i_immortality", "i_rose_gold", "i_athena_shield", "i_wind_nature", "i_queens_wings", "i_bruteforce"].includes(item.id);
+            // 0. Hard Filters (Safety)
             
-            // Filter: Wrong Damage Type
+            // Magic Hero cannot buy Phys Attack Items (Except Wind of Nature for some hybrids, but simplified here)
             if (isMagic && item.category === "attack") return { score: -99 };
+            // Phys Hero cannot buy Magic Items
             if (isPhys && item.category === "magic") return { score: -99 };
             
-            // Filter: Dominance Ice (The Cecilion Fix)
-            // Dominance Ice is strictly for frontliners (Tanks/Fighters). 
-            // Backliners (Mage/MM) should NEVER buy it because the passive aura is short range.
+            // DOMINANCE ICE FIX: Only for Frontliners/Supports. Mages/MMs should use Glowing/Sea Halberd.
             if (item.id === "i_dominance_ice" && !isFrontline && !isSupport) return { score: -99 };
 
-            // Filter: General Tank items on Squishies
-            if (item.category === "defense" && !isFrontline && !isSupport && !isSurvivalItem && item.category !== "movement") {
+            // GENERAL TANK ITEM FIX: Squishies shouldn't buy random tank items unless it's a Survival Item
+            if (item.category === "defense" && !isFrontline && !isSupport && !validSurvival.includes(item.id) && item.category !== "movement") {
                 return { score: -99 };
             }
 
-            // 1. Core Synergy (Matches specific hero needs)
+            // 1. Core Synergy
             if (item.synergy_tags && myHero.style_tags) {
                 const matches = item.synergy_tags.filter(t => myHero.style_tags.includes(t));
                 if (matches.length > 0) {
                     score += (CONFIG.W_CORE_SYNERGY * matches.length);
-                    reasons.push(`Core: Matches need for ${matches[0].replace(/need_/g, '').replace(/_/g, ' ')}`);
+                    reasons.push(`Synergy: ${matches[0].replace(/need_/g, '').replace(/_/g, ' ')}`);
                 }
             }
 
@@ -440,10 +441,14 @@ const app = {
                     if (matches.length > 0) {
                         let weight = CONFIG.W_SOFT_COUNTER;
                         
-                        // Critical Counters (Boost score heavily)
+                        // Boost for Hard Counters
+                        // Anti-heal vs Healing
                         if (matches.includes("high_healing") && item.counter_tags.includes("high_healing")) weight = CONFIG.W_HARD_COUNTER;
+                        // Athena vs Burst Magic
                         if (matches.includes("burst_magic") && item.name.includes("Athena")) weight = CONFIG.W_HARD_COUNTER;
+                        // Tough Boots vs CC
                         if (matches.includes("hard_cc") && item.name.includes("Tough")) weight = CONFIG.W_HARD_COUNTER;
+                        // Wind of Nature vs Phys Burst (Only for MM usually)
                         if (matches.includes("burst_phys") && item.name.includes("Wind")) weight = CONFIG.W_HARD_COUNTER;
                         
                         score += weight;
@@ -463,11 +468,13 @@ const app = {
         const rankedItems = itemPool.map(scoreItem).filter(x => x.score > 0).sort((a,b) => b.score - a.score);
 
         const results = [];
+        // 1. Best Boots
         if (rankedBoots[0]) {
             rankedBoots[0].isBoot = true;
-            if(rankedBoots[0].reasons.length === 0) rankedBoots[0].reasons.push("Best movement option.");
+            if(rankedBoots[0].reasons.length === 0) rankedBoots[0].reasons.push("Best available option.");
             results.push(rankedBoots[0]);
         }
+        // 2. Top 3 Items
         results.push(...rankedItems.slice(0, 3));
 
         app.renderResults(results);
