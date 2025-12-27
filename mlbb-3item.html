@@ -397,19 +397,34 @@ const app = {
         
         const isMagic = myHero.damage_type === "magic";
         const isPhys = myHero.damage_type === "physical";
-        const isTank = myHero.roles.includes("Tank") || myHero.roles.includes("Support");
+        const isTank = myHero.roles.includes("Tank");
+        const isFighter = myHero.roles.includes("Fighter");
+        const isSupport = myHero.roles.includes("Support");
+        const isFrontline = isTank || isFighter;
 
         const scoreItem = (item) => {
             let score = 0;
             let reasons = [];
 
-            // 0. Hard Filters
+            // 0. Hard Filters (The Safety Net)
+            // - Mages/MMs/Assassins should NOT buy tank items unless they are survival items
+            const isSurvivalItem = ["i_winter_crown", "i_immortality", "i_rose_gold", "i_athena_shield", "i_wind_nature", "i_queens_wings", "i_bruteforce"].includes(item.id);
+            
+            // Filter: Wrong Damage Type
             if (isMagic && item.category === "attack") return { score: -99 };
             if (isPhys && item.category === "magic") return { score: -99 };
-            if (isMagic && item.id === "i_sea_halberd") return { score: -99 };
-            if (isPhys && item.id === "i_necklace_durance") return { score: -99 };
+            
+            // Filter: Dominance Ice (The Cecilion Fix)
+            // Dominance Ice is strictly for frontliners (Tanks/Fighters). 
+            // Backliners (Mage/MM) should NEVER buy it because the passive aura is short range.
+            if (item.id === "i_dominance_ice" && !isFrontline && !isSupport) return { score: -99 };
 
-            // 1. Core Synergy
+            // Filter: General Tank items on Squishies
+            if (item.category === "defense" && !isFrontline && !isSupport && !isSurvivalItem && item.category !== "movement") {
+                return { score: -99 };
+            }
+
+            // 1. Core Synergy (Matches specific hero needs)
             if (item.synergy_tags && myHero.style_tags) {
                 const matches = item.synergy_tags.filter(t => myHero.style_tags.includes(t));
                 if (matches.length > 0) {
@@ -424,21 +439,18 @@ const app = {
                     const matches = item.counter_tags.filter(t => e.threat_tags.includes(t));
                     if (matches.length > 0) {
                         let weight = CONFIG.W_SOFT_COUNTER;
-                        // Boost for critical counters
+                        
+                        // Critical Counters (Boost score heavily)
                         if (matches.includes("high_healing") && item.counter_tags.includes("high_healing")) weight = CONFIG.W_HARD_COUNTER;
                         if (matches.includes("burst_magic") && item.name.includes("Athena")) weight = CONFIG.W_HARD_COUNTER;
                         if (matches.includes("hard_cc") && item.name.includes("Tough")) weight = CONFIG.W_HARD_COUNTER;
+                        if (matches.includes("burst_phys") && item.name.includes("Wind")) weight = CONFIG.W_HARD_COUNTER;
                         
                         score += weight;
                         const threatName = matches[0].replace(/_/g, ' ');
                         reasons.push(`Counters <span class="highlight">${e.name}</span> (${threatName})`);
                     }
                 });
-            }
-
-            // 3. Role Adjustments (Defense items on squishies)
-            if (item.category === "defense" && !isTank && item.category !== "movement") {
-                if (score < 4) score -= 2; 
             }
 
             return { item, score, reasons: [...new Set(reasons)] };
